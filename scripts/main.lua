@@ -1,7 +1,7 @@
---Actions(true)
---Bench(true)
---Chain(true)
---Grid(true)
+Actions(true)
+Bench(true)
+Chain(true)
+Grid(true)
 
 clips = {}
 
@@ -12,6 +12,7 @@ for x=0,3 do
 	GridVElement(clips[x],2.5+x,1.5)
 end
 clips[0].hue = 0
+clips[0].circle = false
 
 tex1 = CreateTexture("test_tex.png")
 img = AddVImage();
@@ -22,7 +23,7 @@ img.w = 100
 img.h = 100
 
 
-tiles = CreateTexture("autotile_tileset.png")
+tiles = CreateTexture("test_tiles.png")
 img2 = AddVImage();
 img2.x = 400
 img2.y = 200
@@ -46,7 +47,7 @@ btn = AddVButton(function ()
 		completion = function ()
 			clips[0].progress = 0
 		end,
-		singleton = true
+		singleton = false
 	})
 		
 end);
@@ -81,14 +82,13 @@ lbl.font_idx = 1
 t = 0
 onFrame = function ()
 	local x = 320 + (200 * math.sin(t) );
-    local y = 288 - (100 * math.sin(t*2) );
-    lbl.x = x;
+    	local y = 288 - (100 * math.sin(t*2) );
+    	lbl.x = x;
   	lbl.y = y;
   	t = t + 0.02;
 end
 
 onLoad = function ()
-	xs = sin(0.4)
-	print("loaded now")
-	print(xs)
+	LOG("loaded now")
 end
+
