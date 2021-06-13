@@ -2,68 +2,7 @@
 #include <functional>
 #include "sol/sol.hpp" // or #include "sol.hpp", whichever suits your needs
 #include <raylib.h>
-#include <chrono>
-#include <iostream>
-
-sol::state lua;
-
-#define S_WIDTH 640
-#define S_HEIGHT 480
-#define G_DIV 8
-
-std::vector<Font> fonts;
-struct VElement;
-struct VAction;
-Vector2 DrawString(std::string str ,float x, float y, float s = 16, Color c = WHITE, float anchorX = 0.0f, float anchorY = 0.0f, Font f = fonts[0]);
-
-std::vector<Texture2D> textures_in_script;
-std::vector<std::string> chain;
-std::string current_script;
-std::vector<VAction*> actions;
-std::vector<VElement*> elements;
-std::function<void(void)> onFrame = nullptr;
-using fpstime = std::chrono::duration<int64_t, std::ratio<1,30>>;
-
-std::string message_text;
-fpstime message_timer;
-
-bool script_error = false;
-bool layout_grid = false;
-bool actions_view = false;
-bool bench_view = false;
-bool chain_view = false;
-bool in_console = false;
-bool reload = false;
-
-struct ScopedTimer{
-	std::chrono::high_resolution_clock::time_point start,end; //start and end points for timer
-	std::chrono::nanoseconds* result; //store result in this address
-
-	//start timer and specify result destination, calculated on deletion
-	ScopedTimer(std::chrono::nanoseconds* result){
-		this->result = result;
-		start = std::chrono::high_resolution_clock::now();
-	}
-	~ScopedTimer(){
-		end = std::chrono::high_resolution_clock::now();
-		*result = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start);
-	}
-
-};
-std::chrono::nanoseconds bench_fps;
-std::chrono::nanoseconds bench_frame;
-std::chrono::nanoseconds bench_actions;
-std::chrono::nanoseconds bench_elements;
-
-std::vector<std::string> logs;
-std::vector<std::string> commands;
-std::string command;
-int cmd_index = 0;
-//#define LOG(X) std::cout << CON_YELLOW << "[Info] " << CON_NORM << X << std::endl; logs.push_back("[Info] " + std::string(X));
-//#define ERROR(X) std::cout << CON_RED << "[**Error**] " << X << CON_NORM << std::endl; logs.push_back("[Error]" + std::string(X));
-#define LOG(X) logs.push_back("[Info] " + std::string(X));
-#define ERROR(X) logs.push_back("[Error]" + std::string(X));
-#define PRINT(X) std::cout << X << std::endl;
+#include "types.hpp"
 
 void execCommand(){
 	try{
@@ -71,7 +10,7 @@ void execCommand(){
 		//LOG("{"+command+"}");
 	}
 	catch(std::exception ex){
-		ERROR("Oops - invalid command!");
+		ERROR("Invalid command : " + command);
 	}	
 	commands.push_back(command);
 	command = "";
@@ -249,16 +188,23 @@ struct VTimer : public VElement {
 
 void script();
 void script_init(){
+	
 	lua.open_libraries(sol::lib::base);
+	lua.open_libraries(sol::lib::table);
+	lua.open_libraries(sol::lib::string);
+	lua.open_libraries(sol::lib::io);
 	lua.open_libraries(sol::lib::math);
+	lua.require_file("json","utils/json.lua");
 
 	auto elem = lua.new_usertype<VElement>("VElement");
 	elem["x"] = &VElement::x;
 	elem["y"] = &VElement::y;
 	elem["w"] = &VElement::w;
 	elem["h"] = &VElement::h;
-	elem["a_x"] = &VElement::a_x;
-	elem["a_y"] = &VElement::a_y;
+	elem["ax"] = &VElement::a_x;
+	elem["ay"] = &VElement::a_y;
+	elem["gx"] = sol::property([](VElement* v, float gx){v->x = gx*(float(S_WIDTH)/float(G_DIV));});
+	elem["gy"] = sol::property([](VElement* v, float gy){v->y = gy*(float(S_HEIGHT)/float(G_DIV));});
 	elem["r"] = sol::property([](VElement* v){return v->col.r;}, [](VElement* v, float r){v->col.r = r;});
 	elem["g"] = sol::property([](VElement* v){return v->col.g;}, [](VElement* v, float g){v->col.g = g;});
 	elem["b"] = sol::property([](VElement* v){return v->col.b;}, [](VElement* v, float b){v->col.b = b;});
@@ -323,17 +269,7 @@ void script_init(){
 		v->x += x;
 		v->y += y;
 	};
-	
-	lua["GridVElement"] = [](VElement* v, float gx, float gy){
-		if(v == nullptr) {
-			ERROR("placing invalid object");
-			return;
-		}
-		float x = gx*(float(S_WIDTH)/float(G_DIV));
-		float y = gy*(float(S_HEIGHT)/float(G_DIV));
-		v->x = x;
-		v->y = y;
-	};
+
 	lua["PlaceVElement"] = [](VElement* v, float x, float y){
 		if(v == nullptr) {
 			ERROR("placing invalid object");
@@ -425,6 +361,7 @@ void script_init(){
 			LOG(o.as<std::string>());
 		}
 	};
+		
 }
 void script(){
 	onFrame = nullptr;
@@ -443,20 +380,10 @@ void script(){
 		auto res = sc();
 		script_error = not res.valid();
 		onFrame = lua["onFrame"];
-		PRINT("script Loaded");
 	}
 	catch(std::exception ex){
 		script_error = true;
 		PRINT("script error");
-	}
-	
-	try{
-		lua["onLoad"]();
-		PRINT("script -> onLoad()");
-	}
-	catch(std::exception ex){
-		script_error = true;
-		PRINT("onLoad error");
 	}
 	
 }
@@ -581,15 +508,19 @@ void screen(){
 		
 		BeginDrawing();
 		ClearBackground(BLACK);
-		
+	
 		auto timer_fps = new ScopedTimer(&bench_fps);
 		auto timer_frame = new ScopedTimer(&bench_frame);
+		mtx_lua.lock();
 		if(onFrame) onFrame();
+		mtx_lua.unlock();
 		delete timer_frame;
 		
-		do_elements();
-		
+		mtx_lua.lock();
 		do_actions();
+		mtx_lua.unlock();
+		
+		do_elements();
 		
 		if(not message_text.empty() and message_timer.count() > 0){
 			DrawRectangle(0,0,640,64,{255,255,255,64});
@@ -634,13 +565,14 @@ void screen(){
 				DrawString(s,16*x++,S_HEIGHT-16*y++,16,WHITE,0.0,1.0);
 			}
 		}
-		
+			
 		do_console();
-		
 		
 		EndDrawing();
 		
+		mtx_lua.lock();
 		check_script();
+		mtx_lua.unlock();
 	}
 	CloseWindow();
 }
@@ -673,7 +605,86 @@ int main(int argc, char* argv[]) {
 	init();
 	script_init();
 	script();
+	
+	try{
+		lua["onInit"]();
+	}
+	catch(std::exception ex){
+		script_error = true;
+		PRINT("onLoad error");
+	}
+	
+	static bool running = true;
+	std::thread t([=](){
+		while(running){
+			pollMidi();
+			usleep(5000);
+		}
+	});
+	
 	screen();	
 	
+	running = false;
+	t.join();
+	
 	return 0;
+}
+
+
+
+void pollMidi(){
+	//connection management
+	unsigned int nDevicesCount = scanner.getPortCount();
+	if(nDevicesCount != devicesCount){
+		PRINT((nDevicesCount > devicesCount ? "Device connect" : "Device disconnect"));
+		for( RtMidiIn* d : devices ){
+			d->closePort();
+		}
+		devices.clear();
+		for (int i=0; i<nDevicesCount; i++) {
+			try {
+				devices.push_back(new RtMidiIn());
+				devices.back()->openPort(i);
+			}
+			catch ( RtMidiError &error ) {
+				error.printMessage();
+			}
+		}
+		devicesCount = nDevicesCount;
+	}
+	
+
+	//scan event per device
+	for(RtMidiIn* input : devices){
+		for(int d=0; d<nDevicesCount; d++){
+			input->getMessage( &rawmidi );
+			int nBytes = rawmidi.size();
+
+			unsigned char bytes[3];
+			int n=0;
+			MidiData m;
+
+			for (int i=0; i<nBytes; i++ ){
+				bytes[n] = rawmidi[i];
+				n++;
+				if(n==3){
+					n = 0;
+					
+					m.parse(bytes);
+					PRINT(m.print());
+					
+					checkEvent(&m);
+				}
+			}
+		}
+	}
+}
+
+void checkEvent(MidiData* m){
+	mtx_lua.lock();
+		auto mappings = lua["mappings"];
+		auto ev = mappings[m->s][m->n];
+		//if(midis == sol::type::table)
+		
+	mtx_lua.unlock();
 }

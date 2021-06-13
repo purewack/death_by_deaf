@@ -7,9 +7,10 @@ clips = {}
 
 for x=0,3 do
 	clips[x] = AddVTimer()
-	clips[x].w = 50
-	clips[x].h = 50
-	GridVElement(clips[x],2.5+x,1.5)
+	clips[x].gx = 2.5+x
+	clips[x].gy = 1.5
+	clips[x].w = 40
+	clips[x].h = 40
 end
 clips[0].hue = 0
 clips[0].circle = false
@@ -53,8 +54,8 @@ btn = AddVButton(function ()
 end);
 btn.w = 54
 btn.h = 54
-btn.a_x = 0.0
-btn.a_y = 0.0
+btn.ax = 0.0
+btn.ay = 0.0
 
 nxt = AddVButton(function()
 	Present("scripts/screen2.lua")
@@ -74,9 +75,20 @@ nxt2.h = 40
 nxt2.x = 500
 nxt2.y = 400
 
+sv = AddVButton(function ()
+	local w = {}
+	w["x"] = 48
+
+	local string = json.encode(w)
+	local file = io.open("saved.json","w")
+	io.output(file)
+	io.write(string)
+	io.close(file)
+end)
+sv.gx = 1
+sv.gy = 7
+
 lbl = AddVLabel("hello");
-lbl.a_x = 0
-lbl.a_y = 0
 lbl.font_idx = 1
 
 t = 0
@@ -88,7 +100,10 @@ onFrame = function ()
   	t = t + 0.02;
 end
 
-onLoad = function ()
-	LOG("loaded now")
+onMidi = function()
+	print("midi in lua")
 end
 
+onInit = function ()
+	print("program started, lua callback")
+end
