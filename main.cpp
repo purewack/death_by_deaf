@@ -4,6 +4,20 @@
 #include <raylib.h>
 #include "types.hpp"
 
+void makeRoot(const char* argv){
+	auto name = std::string("lua_motif");
+	
+	char* p = (char*)malloc(sizeof(char)*1024);
+	getcwd(p,1024);
+	root = std::string(p) + "/";
+	std::string arg0 = "";
+	arg0 += std::string(argv);
+	arg0 = arg0.substr(0,arg0.size()-name.size());
+	
+	if(arg0[0] == '/') root = "";
+	root += arg0;
+}
+
 void execCommand(){
 	try{
 		lua.script(command);
@@ -644,16 +658,7 @@ void init(){
 
 int main(int argc, char* argv[]) {
 	
-	auto name = std::string("lua_motif");
-	char* p = (char*)malloc(sizeof(char)*1024);
-	getcwd(p,1024);
-	root = std::string(p) + "/";
-	std::string arg0 = "";
-	arg0 += std::string(argv[0]);
-	arg0 = arg0.substr(0,arg0.size()-name.size());
-	
-	if(arg0[0] == '/') root = "";
-	root += arg0;
+	makeRoot(argv[0]);
 		
 	current_script = "scripts/main.lua";
 	chain.push_back(current_script);
