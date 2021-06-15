@@ -136,6 +136,8 @@ struct VButton : public VElement {
 	
 	virtual ~VButton(){};
 	bool selected = false;
+	bool togglable = false;
+	bool toggled = false;
 	std::function<void(void)> onPress = nullptr;
 	
 	void draw() override {	
@@ -143,12 +145,23 @@ struct VButton : public VElement {
 		float yy = y - h*a_y;	
 		Rectangle r = {xx,yy,w,h};
 		DrawRectangleLines(xx,yy,w,h,col);
-		if(CheckCollisionPointRec(GetMousePosition(),r)){
+		
+		if(togglable){
+			if(toggled) DrawRectangle(xx+2,yy+2,w-4,h-4,col);
+			if(CheckCollisionPointRec(GetMousePosition(),r) and IsMouseButtonPressed(0) and onPress){
+				if(not toggled) onPress();
+				toggled = not toggled;
+			}
+		}
+		else if(CheckCollisionPointRec(GetMousePosition(),r)){
 			DrawRectangle(xx+2,yy+2,w-4,h-4,col);
 			if(IsMouseButtonPressed(0) and onPress){
 				onPress();
 			}
 		}
+		
+		if(selected)
+		DrawRectangleLines(xx-2,yy-2,w+4,h+4,col);
 	}
 	
 	//void onPress();
@@ -194,7 +207,7 @@ void script_init(){
 	lua.open_libraries(sol::lib::string);
 	lua.open_libraries(sol::lib::io);
 	lua.open_libraries(sol::lib::math);
-	lua.require_file("json","utils/json.lua");
+	lua.require_file("json",root + "utils/json.lua");
 
 	auto elem = lua.new_usertype<VElement>("VElement");
 	elem["x"] = &VElement::x;
@@ -203,8 +216,8 @@ void script_init(){
 	elem["h"] = &VElement::h;
 	elem["ax"] = &VElement::a_x;
 	elem["ay"] = &VElement::a_y;
-	elem["gx"] = sol::property([](VElement* v, float gx){v->x = gx*(float(S_WIDTH)/float(G_DIV));});
-	elem["gy"] = sol::property([](VElement* v, float gy){v->y = gy*(float(S_HEIGHT)/float(G_DIV));});
+	elem["gx"] = sol::property([](VElement* v, float gx){v->x = gx*(float(S_WIDTH)/float(g_div));});
+	elem["gy"] = sol::property([](VElement* v, float gy){v->y = gy*(float(S_HEIGHT)/float(g_div));});
 	elem["r"] = sol::property([](VElement* v){return v->col.r;}, [](VElement* v, float r){v->col.r = r;});
 	elem["g"] = sol::property([](VElement* v){return v->col.g;}, [](VElement* v, float g){v->col.g = g;});
 	elem["b"] = sol::property([](VElement* v){return v->col.b;}, [](VElement* v, float b){v->col.b = b;});
@@ -215,7 +228,6 @@ void script_init(){
 	lbl["text"] = &VLabel::text;
 	lbl["size"] = &VLabel::size;
 	lbl["font_idx"] = &VLabel::font;
-
 	
 	lua.new_usertype<Texture2D>("VTex");
 	auto image = lua.new_usertype<VImage>("VImage",sol::base_classes, sol::bases<VElement>());
@@ -227,17 +239,25 @@ void script_init(){
 	
 	auto timer = lua.new_usertype<VTimer>("VTimer",sol::base_classes, sol::bases<VElement>());
 	timer["progress"] = &VTimer::progress;
-	timer["circle"] = &VTimer::circle;
+	timer["circular"] = &VTimer::circle;
 	timer["invert"] = &VTimer::invert;
 	
-	lua.new_usertype<VButton>("VButton",sol::base_classes, sol::bases<VElement>());
+	auto btn = lua.new_usertype<VButton>("VButton",sol::base_classes, sol::bases<VElement>());
+	btn["toggle"] = &VButton::togglable;
+	btn["selected"] = &VButton::selected;
+	btn["action"] = sol::property([](VButton* b, std::function<void(void)> f){b->onPress = f;});
 	
 	lua["CreateTexture"] = [](std::string t) -> Texture2D {
-		auto tex = LoadTexture(t.c_str());
+		auto tex = LoadTexture((root+t).c_str());
 		textures_in_script.push_back(tex);
 		return tex;
 	};
 	
+	lua["AddVElement"] = []() -> VElement* { 
+		auto l = new VElement();
+		elements.push_back(l);
+		return l;
+	};
 	lua["AddVLabel"] = [](std::string s) -> VLabel* { 
 		auto l = new VLabel();
 		l->text = s;
@@ -328,6 +348,15 @@ void script_init(){
 		message_timer = std::chrono::duration_cast<fpstime>(std::chrono::seconds{2});
 	};
 	
+	lua["GridDiv"] = [](int d){
+		g_div = d;
+	};
+	lua["GridW"] = []() -> int{
+		return (S_WIDTH)/g_div;
+	};
+	lua["GridH"] = []() -> int{
+		return (S_HEIGHT)/g_div;
+	};
 	lua["Grid"] = [](bool state){
 		layout_grid = state;
 	};
@@ -352,15 +381,6 @@ void script_init(){
 		reload = true;
 	};
 	
-	
-	lua["LOG"] = [](sol::object o){
-		if(o.get_type() == sol::type::number){
-			LOG(std::to_string(float(o.as<float>())));
-		}
-		else if(o.is<std::string>()){
-			LOG(o.as<std::string>());
-		}
-	};
 		
 }
 void script(){
@@ -374,17 +394,50 @@ void script(){
 	}
 	textures_in_script.clear();
 	
+	//load builder UI
+	try{
+		auto sc = lua.load_file(root + "utils/ui.lua");
+		auto result = sc();
+		if (result.valid()) {
+			LOG("ui success");
+		}
+		else {
+			// Call failed
+			sol::error err = result;
+			std::string what = err.what();
+			std::cout << "call failed, sol::error::what() is " << what << std::endl;
+			// 'what' Should read 
+			// "Handled this message: negative number detected"
+		}
+	}
+	catch(std::exception ex){
+		LOG("ui error");
+	}
+	
+	//load screen script
 	try{
 		lua["onFrame"] = nullptr;
-		auto sc = lua.load_file(current_script);
-		auto res = sc();
-		script_error = not res.valid();
-		onFrame = lua["onFrame"];
+		auto sc = lua.load_file(root + current_script);
+		auto result = sc();
+		script_error = not result.valid();
+		if (result.valid()) {
+			onFrame = lua["onFrame"];
+			LOG("script success");
+		}
+		else {
+			// Call failed
+			sol::error err = result;
+			std::string what = err.what();
+			std::cout << "call failed, sol::error::what() is " << what << std::endl;
+			// 'what' Should read 
+			// "Handled this message: negative number detected"
+		}
 	}
 	catch(std::exception ex){
 		script_error = true;
-		PRINT("script error");
+		LOG("script error");
 	}
+	
 	
 }
 void check_script(){
@@ -430,19 +483,19 @@ void do_elements(){
 
 void do_grid(){
 	if(layout_grid){
-		const float dx = float(S_WIDTH)/float(G_DIV);
-		const float dy = float(S_HEIGHT)/float(G_DIV);
+		const float dx = float(S_WIDTH)/float(g_div);
+		const float dy = float(S_HEIGHT)/float(g_div);
 
-		for(int y=0; y<G_DIV; y++){
-			for(int x=0; x<G_DIV; x++){
+		for(int y=0; y<g_div; y++){
+			for(int x=0; x<g_div; x++){
 				DrawLine(0,y*dy,S_WIDTH,y*dy,GRAY);
 				DrawLine(x*dx,0,x*dx,S_HEIGHT,GRAY);
 			}
 		}
 	
 		auto m = GetMousePosition();
-		float gx = m.x/(float(S_WIDTH)/float(G_DIV));
-		float gy = m.y/(float(S_HEIGHT)/float(G_DIV));
+		float gx = m.x/(float(S_WIDTH)/float(g_div));
+		float gy = m.y/(float(S_HEIGHT)/float(g_div));
 		std::string coords;
 		coords += std::to_string(gx);
 		coords += ",";
@@ -485,20 +538,12 @@ void do_console(){
 			if(c != '`')
 			command += c;
 		}
-
-		DrawRectangle(16,0,S_WIDTH-32,S_HEIGHT-16,{0,0,0,160});
-		DrawRectangleLines(16,0,S_WIDTH-32,16,WHITE);
-		DrawRectangleLines(16,16,S_WIDTH-32,S_HEIGHT-32,WHITE);
-
-		DrawString("->" + command,16,0);
-		int s = logs.size()-27;
-		if(s < 0)s = 0;
-		int y = 1;
-		for(int i=s; i<logs.size(); i++){
-			auto line = logs[i];
-			DrawString(">" + line,16,16*y++);
-		}
 	}
+
+	DrawRectangle(16,S_HEIGHT,S_WIDTH-32,16,(in_console ? DARKGRAY : BLACK));
+	DrawString("->" + command,16,S_HEIGHT);
+	if(not in_console)DrawRectangleLines(16,S_HEIGHT,S_WIDTH-32,16,DARKGRAY);	
+	
 	if(IsKeyPressed(KEY_GRAVE)) in_console = not in_console;
 
 }
@@ -587,10 +632,10 @@ Vector2 DrawString(std::string str ,float x, float y, float s, Color c, float an
 	
 	
 void init(){
-	InitWindow(640,480,"scripter");
+	InitWindow(640,580,"scripter");
 	SetTargetFPS(30);
-	auto fixedsys = LoadFont("fixedsys.ttf");
-	auto consolas = LoadFont("Consolas.ttf");
+	auto fixedsys = LoadFont((root + "fixedsys.ttf").c_str());
+	auto consolas = LoadFont((root + "Consolas.ttf").c_str());
 	fonts.push_back(fixedsys);
 	fonts.push_back(consolas);
 	commands.push_back("");
@@ -599,6 +644,17 @@ void init(){
 
 int main(int argc, char* argv[]) {
 	
+	auto name = std::string("lua_motif");
+	char* p = (char*)malloc(sizeof(char)*1024);
+	getcwd(p,1024);
+	root = std::string(p) + "/";
+	std::string arg0 = "";
+	arg0 += std::string(argv[0]);
+	arg0 = arg0.substr(0,arg0.size()-name.size());
+	
+	if(arg0[0] == '/') root = "";
+	root += arg0;
+		
 	current_script = "scripts/main.lua";
 	chain.push_back(current_script);
 	
@@ -611,7 +667,7 @@ int main(int argc, char* argv[]) {
 	}
 	catch(std::exception ex){
 		script_error = true;
-		PRINT("onLoad error");
+		LOG("onLoad error");
 	}
 	
 	static bool running = true;
@@ -636,7 +692,7 @@ void pollMidi(){
 	//connection management
 	unsigned int nDevicesCount = scanner.getPortCount();
 	if(nDevicesCount != devicesCount){
-		PRINT((nDevicesCount > devicesCount ? "Device connect" : "Device disconnect"));
+		LOG((nDevicesCount > devicesCount ? "Device connect" : "Device disconnect"));
 		for( RtMidiIn* d : devices ){
 			d->closePort();
 		}
@@ -671,7 +727,7 @@ void pollMidi(){
 					n = 0;
 					
 					m.parse(bytes);
-					PRINT(m.print());
+					LOG(m.print());
 					
 					checkEvent(&m);
 				}

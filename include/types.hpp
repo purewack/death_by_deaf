@@ -9,9 +9,11 @@
 #include <unistd.h>
 #include <mutex>
 
+std::string root;
+
 #define S_WIDTH 640
 #define S_HEIGHT 480
-#define G_DIV 8
+int g_div = 8;
 
 sol::state lua;
 std::mutex mtx_lua;
@@ -133,12 +135,10 @@ std::chrono::nanoseconds bench_frame;
 std::chrono::nanoseconds bench_actions;
 std::chrono::nanoseconds bench_elements;
 
-std::vector<std::string> logs;
 std::vector<std::string> commands;
 std::string command;
 int cmd_index = 0;
-//#define LOG(X) std::cout << CON_YELLOW << "[Info] " << CON_NORM << X << std::endl; logs.push_back("[Info] " + std::string(X));
-//#define ERROR(X) std::cout << CON_RED << "[**Error**] " << X << CON_NORM << std::endl; logs.push_back("[Error]" + std::string(X));
-#define LOG(X) logs.push_back("[Info] " + std::string(X));
-#define ERROR(X) logs.push_back("[Error]" + std::string(X));
-#define PRINT(X) std::cout << X << std::endl;
+
+#define LOG(X) std::cout << "[Info] " << X << std::endl; 
+#define ERROR(X) std::cout << "[**Error**] " << X << std::endl;
+
