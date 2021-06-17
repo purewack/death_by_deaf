@@ -55,6 +55,7 @@ onEnter()
 end)
 sv.gx = 1
 sv.gy = 7
+sv.tag = "sv"
 
 nx = AddVButton(function ()
 onNavigation(true)
@@ -64,6 +65,7 @@ nx.gy = 7
 
 lbl = AddVLabel("hello");
 lbl.font_idx = 1
+lbl.size = 40
 
 t = 0
 onFrame = function ()
@@ -73,17 +75,3 @@ local x = 320 + (200 * math.sin(t) );
  	lbl.y = y;
  	t = t + 0.02;
 end
-
-onNavigation = function(nav_next)
-print("nav")
-print(nav_next)
-end
-
-onEnter = function()
-print("enter")	
-end
-
-onMidi = function()
-print("midi in lua")
-end
-

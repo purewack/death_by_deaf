@@ -1,6 +1,12 @@
 {
 	"version" : 1.0
 	"title" : "default",
-	"mappings" : [],
+	"mappings" : [
+		{
+			"event" : 144,
+			"event_key" : 40,
+			"event_action" : "print(\"test action nt_on_40\")"
+		}
+	],
 	"tracks" : []
 }

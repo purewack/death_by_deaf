@@ -30,7 +30,7 @@ onUIReload = function ()
 		controls[c] = AddVButton() 
 		controls[c].gx = 0
 		controls[c].x = controls[c].x + 32*c
-		controls[c].y = 520
+		controls[c].y = 550
 		controls[c].ax = 0
 	end
 	
@@ -40,19 +40,19 @@ onUIReload = function ()
 	
 	cc = controls[key_less] 
 	cc.ax = 0
-	cc.y = 540
+	cc.y = 530
 	cc.x = controls[1].x
 	cc.w = cc.w *2 
 
 	cc = controls[key_more] 
 	cc.ax = 1
-	cc.y = 540
+	cc.y = 530
 	cc.x = controls[key_play].x + controls[key_play].w
 	cc.w = cc.w * 2
 
 	cc = controls[key_ok] 
 	cc.ax = 0.5
-	cc.y = 540
+	cc.y = 530
 	cc.x = (controls[key_shift].x + controls[key_play].x+controls[key_play].w) / 2
 	cc.w = cc.w * 2
 	
@@ -62,7 +62,7 @@ onUIReload = function ()
 	for y=1,4 do
 		for x=1,4 do
 			controls[j] = AddVButton()
-			controls[j].x = sx + x*24 
+			controls[j].x = sx + x*20 
 			controls[j].y = sy - (y-1)*20
 			controls[j].ay = 1.0
 			j = j + 1
@@ -70,11 +70,10 @@ onUIReload = function ()
 	end
 	
 	for c=1,23 do
-		print(c_names[c])
 		controls[c].tag = c_names[c]
+		controls[c].action = function ()
+			checkMidi(ev_note_on,c)
+		end
 	end	
-	
-	controls[key_stop].action = function ()
-		print("transport.stop()")
-	end
+
 end

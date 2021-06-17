@@ -4,7 +4,7 @@ map = {}
 map[ev_note_on] = {}
 map[ev_note_cc] = {}
 
-sesh = " "
+sesh = root
 function readJSON()
 	local file = io.open(sesh .. "mappings.json","r")
 	read_json = json.decode(file:read "*a")
@@ -19,7 +19,7 @@ function writeJSON()
 	io.close(file)
 end
 
-function remapMidi()
+function reloadMidi()
 	for x in pairs(read_json) do
 		ev = read_json[x]
 		if ev["event"] == ev_note_on then
@@ -28,9 +28,17 @@ function remapMidi()
 	end
 end
 
-function checkMidi(e,n)
-	action = map[e][n]
+function remapMidi(ev,note,vel,code) 
+
+end
+
+function checkMidi(ev,note,vel)
+	action = map[ev][note]
 	if action then
+		ev_vel = vel
 		action()
 	end
 end
+
+readJSON()
+reloadMidi()

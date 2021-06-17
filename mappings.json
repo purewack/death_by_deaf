@@ -1,0 +1,17 @@
+[
+	{
+		"event" : 144,
+		"event_key" : 1,
+		"event_action" : "print(\"system.shift(ev_vel)\")"
+	},
+	{
+		"event" : 144,
+		"event_key" : 2,
+		"event_action" : "print(\"transport.stop()\")"
+	},
+	{
+		"event" : 144,
+		"event_key" : 3,
+		"event_action" : "print(\"transport.rec()\")"
+	}
+]

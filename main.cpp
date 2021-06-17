@@ -234,6 +234,7 @@ void lua_init(){
 	lua.open_libraries(sol::lib::string);
 	lua.open_libraries(sol::lib::io);
 	lua.open_libraries(sol::lib::math);
+	lua.open_libraries(sol::lib::os);
 	lua["root"] = root;
 	lua.require_file("json",root + "scripts/json.lua");
 	lua.script_file(root + "scripts/_loader.lua");
@@ -287,6 +288,19 @@ void lua_init(){
 		return tex;
 	};
 	
+	lua["RemoveVElement"] = [](VElement* l){
+		elements.erase(std::remove_if(
+			elements.begin(), 
+            elements.end(),
+            [=](auto a){
+            	if(a == l){
+					return true;
+            	}
+            	return false;
+            }),
+            elements.end()
+        );
+	};
 	lua["AddVElement"] = []() -> VElement* { 
 		auto l = new VElement();
 		elements.push_back(l);
@@ -414,7 +428,10 @@ void lua_init(){
 		current_script = chain.back();
 		reload = true;
 	};
-		
+	lua["ToggleAnimation"] = [](){
+		if(onFrame) onFrame = nullptr;
+		else onFrame = lua["onFrame"];
+	};
 }
 void script(){
 	onFrame = nullptr;
@@ -755,6 +772,6 @@ void pollMidi(){
 
 void checkEvent(MidiData* m){
 	mtx_lua.lock();
-	lua["checkMidi"](m->s,m->n);
+	lua["checkMidi"](m->s,m->n,m->v);
 	mtx_lua.unlock();
 }
