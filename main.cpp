@@ -49,6 +49,7 @@ struct VElement{
 	float a_x = 0.5f; //anchor points
 	float a_y = 0.5f;
 	
+	std::string tag = "default";
 	Color col = WHITE;
 	
 	bool bound_box = false;
@@ -61,13 +62,25 @@ struct VElement{
 		float xx = x - w*a_x;
 		float yy = y - h*a_y;
 		bool hover = (CheckCollisionPointRec(GetMousePosition(),{xx,yy,w,h}));
-		if(hover and IsMouseButtonPressed(0) and IsKeyDown(KEY_LEFT_SHIFT) and not in_console) bound_box = not bound_box;
+		if(hover and IsMouseButtonPressed(0) and IS_SHIFT_DOWN and not in_console) bound_box = not bound_box;
 		
+		if(hover and IS_SHIFT_DOWN) 
+		{
+			DrawString(tag,x-1,y-1,16,BLACK);
+			DrawString(tag,x,y);
+		}
 		if(bound_box){
 			DrawRectangleLines(xx,yy,w,h,(hover ? RED : WHITE));
 			DrawRectangleLines(xx+1,yy+1,w-2,h-2,RED);
 			DrawLine(x,yy-10,x,yy+h+10,PURPLE);
 			DrawLine(xx-10,y,xx+w+10,y,BLUE);	
+			
+			std::string pos;
+			pos += std::to_string(x);
+			pos += ",";
+			pos += std::to_string(y);
+			DrawString(pos,x,y);
+			
 		}
 	}
 	
@@ -162,14 +175,14 @@ struct VButton : public VElement {
 		
 		if(togglable){
 			if(toggled) DrawRectangle(xx+2,yy+2,w-4,h-4,col);
-			if(CheckCollisionPointRec(GetMousePosition(),r) and IsMouseButtonPressed(0) and onPress){
+			if(CheckCollisionPointRec(GetMousePosition(),r) and IsMouseButtonPressed(0) and onPress and not IS_SHIFT_DOWN){
 				if(not toggled) onPress();
 				toggled = not toggled;
 			}
 		}
 		else if(CheckCollisionPointRec(GetMousePosition(),r)){
 			DrawRectangle(xx+2,yy+2,w-4,h-4,col);
-			if(IsMouseButtonPressed(0) and onPress){
+			if(IsMouseButtonPressed(0) and onPress and not IS_SHIFT_DOWN){
 				onPress();
 			}
 		}
@@ -214,15 +227,21 @@ struct VTimer : public VElement {
 };
 
 void script();
-void script_init(){
+void lua_init(){
 	
 	lua.open_libraries(sol::lib::base);
 	lua.open_libraries(sol::lib::table);
 	lua.open_libraries(sol::lib::string);
 	lua.open_libraries(sol::lib::io);
 	lua.open_libraries(sol::lib::math);
-	lua.require_file("json",root + "utils/json.lua");
-
+	lua["root"] = root;
+	lua.require_file("json",root + "scripts/json.lua");
+	lua.script_file(root + "scripts/_loader.lua");
+	
+	lua["S_W"] = S_WIDTH;
+	lua["S_H"] = S_HEIGHT;
+	lua["S_HT"] = S_HEIGHT_T;
+	
 	auto elem = lua.new_usertype<VElement>("VElement");
 	elem["x"] = &VElement::x;
 	elem["y"] = &VElement::y;
@@ -237,6 +256,7 @@ void script_init(){
 	elem["b"] = sol::property([](VElement* v){return v->col.b;}, [](VElement* v, float b){v->col.b = b;});
 	elem["a"] = sol::property([](VElement* v){return v->col.a;}, [](VElement* v, float a){v->col.a = a;});
 	elem["hue"] = sol::property([](VElement* v){return ColorToHSV(v->col).x;}, [](VElement* v, float h){v->col = ColorFromHSV(h,1.0,1.0);});
+	elem["tag"] = &VElement::tag;
 	
 	auto lbl = lua.new_usertype<VLabel>("VLabel",sol::base_classes, sol::bases<VElement>());
 	lbl["text"] = &VLabel::text;
@@ -394,11 +414,11 @@ void script_init(){
 		current_script = chain.back();
 		reload = true;
 	};
-	
 		
 }
 void script(){
 	onFrame = nullptr;
+	onUIFrame = nullptr;
 	for(auto e : elements) delete e;
 	for(auto a : actions) delete a;
 	elements.clear();
@@ -408,34 +428,15 @@ void script(){
 	}
 	textures_in_script.clear();
 	
-	//load builder UI
-	try{
-		auto sc = lua.load_file(root + "utils/ui.lua");
-		auto result = sc();
-		if (result.valid()) {
-			LOG("ui success");
-		}
-		else {
-			// Call failed
-			sol::error err = result;
-			std::string what = err.what();
-			std::cout << "call failed, sol::error::what() is " << what << std::endl;
-			// 'what' Should read 
-			// "Handled this message: negative number detected"
-		}
-	}
-	catch(std::exception ex){
-		LOG("ui error");
-	}
-	
 	//load screen script
 	try{
-		lua["onFrame"] = nullptr;
-		auto sc = lua.load_file(root + current_script);
+		auto sc = lua.load_file(root + chain.back());
 		auto result = sc();
 		script_error = not result.valid();
 		if (result.valid()) {
 			onFrame = lua["onFrame"];
+			lua["onUIReload"]();
+			onUIFrame = lua["onUIFrame"];
 			LOG("script success");
 		}
 		else {
@@ -455,7 +456,7 @@ void script(){
 	
 }
 void check_script(){
-	if((IsKeyPressed(KEY_R) and IsKeyDown(KEY_LEFT_SHIFT) and not in_console) or reload){
+	if((IsKeyPressed(KEY_R) and IS_SHIFT_DOWN and not in_console) or reload){
 		script();
 		reload = false;
 	}		
@@ -506,8 +507,10 @@ void do_grid(){
 				DrawLine(x*dx,0,x*dx,S_HEIGHT,GRAY);
 			}
 		}
-	
+		
 		auto m = GetMousePosition();
+		if(m.y > S_HEIGHT) return;
+		
 		float gx = m.x/(float(S_WIDTH)/float(g_div));
 		float gy = m.y/(float(S_HEIGHT)/float(g_div));
 		std::string coords;
@@ -554,7 +557,7 @@ void do_console(){
 		}
 	}
 
-	DrawRectangle(16,S_HEIGHT,S_WIDTH-32,16,(in_console ? DARKGRAY : BLACK));
+	DrawRectangle(16,S_HEIGHT,S_WIDTH-32,16,(in_console ? DARKGRAY : (IS_SHIFT_DOWN ? RED : BLACK)));
 	DrawString("->" + command,16,S_HEIGHT);
 	if(not in_console)DrawRectangleLines(16,S_HEIGHT,S_WIDTH-32,16,DARKGRAY);	
 	
@@ -567,19 +570,20 @@ void screen(){
 		
 		BeginDrawing();
 		ClearBackground(BLACK);
-	
+		
+		mtx_lua.lock();
 		auto timer_fps = new ScopedTimer(&bench_fps);
 		auto timer_frame = new ScopedTimer(&bench_frame);
-		mtx_lua.lock();
 		if(onFrame) onFrame();
-		mtx_lua.unlock();
 		delete timer_frame;
+		if(onUIFrame) onUIFrame();
+		mtx_lua.unlock();
+		
+		do_elements();
 		
 		mtx_lua.lock();
 		do_actions();
 		mtx_lua.unlock();
-		
-		do_elements();
 		
 		if(not message_text.empty() and message_timer.count() > 0){
 			DrawRectangle(0,0,640,64,{255,255,255,64});
@@ -601,6 +605,7 @@ void screen(){
 			float ratio_frame = float(bench_frame.count()) / float(total.count());
 			float ratio_actions = float(bench_actions.count()) / float(total.count());
 			float ratio_elements = float(bench_elements.count()) / float(total.count());
+			float ratio_dsp = 0.5f;
 			float ratio_total = float(total.count());
 			
 			DrawRectangleLines(524,8,100.0f,8,GREEN);
@@ -608,12 +613,17 @@ void screen(){
 			
 			DrawRectangleLines(524,16,100.0f,8,WHITE);
 			DrawRectangle(524,16,100.0f*ratio_frame,8,PURPLE);
-			DrawRectangle(524+100.0f*ratio_frame,16,100.0f*ratio_actions,8,PURPLE);
+			DrawRectangle(524+100.0f*ratio_frame,16,100.0f*ratio_actions,8,YELLOW);
 			DrawRectangle(524+100.0f*ratio_actions,16,100.0f*ratio_elements,8,SKYBLUE);
-			DrawString("[Fps] " + std::to_string(100.0f*ratio_fps)+"%",500,32,16,GRAY);
-			DrawString("[Frm] " + std::to_string(100.0f*ratio_frame)+"%",500,48,16,GRAY);
-			DrawString("[Act] " + std::to_string(100.0f*ratio_actions)+"%",500,64,16,GRAY);
-			DrawString("[Elm] " + std::to_string(100.0f*ratio_elements)+"%",500,80,16,GRAY);
+			DrawString("[Fps] " + std::to_string(100.0f*ratio_fps)+"%",500,32,16,GREEN);
+			DrawString("[Frm] " + std::to_string(100.0f*ratio_frame)+"%",500,48,16,PURPLE);
+			DrawString("[Act] " + std::to_string(100.0f*ratio_actions)+"%",500,64,16,YELLOW);
+			DrawString("[Elm] " + std::to_string(100.0f*ratio_elements)+"%",500,80,16,SKYBLUE);
+			
+			DrawRectangleLines(524,24,100.0f,8,WHITE);
+			DrawRectangle(524,24,100.0f*ratio_dsp,8,RED);
+			DrawString("[DSP] " + std::to_string(100.0f*ratio_dsp)+"%",500,96,16,RED);
+			
 		}
 		
 		if(chain_view){
@@ -646,7 +656,7 @@ Vector2 DrawString(std::string str ,float x, float y, float s, Color c, float an
 	
 	
 void init(){
-	InitWindow(640,580,"scripter");
+	InitWindow(S_WIDTH,S_HEIGHT_T,"scripter");
 	SetTargetFPS(30);
 	auto fixedsys = LoadFont((root + "fixedsys.ttf").c_str());
 	auto consolas = LoadFont((root + "Consolas.ttf").c_str());
@@ -654,17 +664,8 @@ void init(){
 	fonts.push_back(consolas);
 	commands.push_back("");
 	command = "";
-}
-
-int main(int argc, char* argv[]) {
 	
-	makeRoot(argv[0]);
-		
-	current_script = "scripts/main.lua";
-	chain.push_back(current_script);
-	
-	init();
-	script_init();
+	lua_init();
 	script();
 	
 	try{
@@ -674,6 +675,17 @@ int main(int argc, char* argv[]) {
 		script_error = true;
 		LOG("onLoad error");
 	}
+	
+}
+
+int main(int argc, char* argv[]) {
+	
+	makeRoot(argv[0]);
+		
+	current_script = "scripts/screen_root.lua";
+	chain.push_back(current_script);
+	
+	init();
 	
 	static bool running = true;
 	std::thread t([=](){
@@ -743,9 +755,6 @@ void pollMidi(){
 
 void checkEvent(MidiData* m){
 	mtx_lua.lock();
-		auto mappings = lua["mappings"];
-		auto ev = mappings[m->s][m->n];
-		//if(midis == sol::type::table)
-		
+	lua["checkMidi"](m->s,m->n);
 	mtx_lua.unlock();
 }

@@ -15,9 +15,6 @@ end)
 btn.w = 40
 btn.h = 40
 
-print("script 2")
-
-
 nxt = AddVButton(function()
 	Present("scripts/screen3.lua")
 end)

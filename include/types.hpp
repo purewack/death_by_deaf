@@ -10,9 +10,11 @@
 #include <mutex>
 
 std::string root;
+std::string sesh;
 
 #define S_WIDTH 640
 #define S_HEIGHT 480
+#define S_HEIGHT_T 580
 int g_div = 8;
 
 sol::state lua;
@@ -35,7 +37,7 @@ struct MidiData{
 		s = bytes[0] & 0xF0; //strip status byte
 		n = bytes[1]; //note
 		v = bytes[2]; //vel
-		if(s==MidiBytes::off) {s=MidiBytes::on; v=0;}
+		if(s==MidiBytes::on and v == 0) {s=MidiBytes::off;}
 	}
 	float range(float scaleMin, float scaleMax){
 		return scaleMin+((float(v)/127.0)*(scaleMax-scaleMin));
@@ -102,6 +104,7 @@ std::string current_script;
 std::vector<VAction*> actions;
 std::vector<VElement*> elements;
 std::function<void(void)> onFrame = nullptr;
+std::function<void(void)> onUIFrame = nullptr;
 using fpstime = std::chrono::duration<int64_t, std::ratio<1,30>>;
 
 std::string message_text;
@@ -114,6 +117,7 @@ bool bench_view = false;
 bool chain_view = false;
 bool in_console = false;
 bool reload = false;
+bool shift_down = false;
 
 struct ScopedTimer{
 	std::chrono::high_resolution_clock::time_point start,end; //start and end points for timer
@@ -134,6 +138,7 @@ std::chrono::nanoseconds bench_fps;
 std::chrono::nanoseconds bench_frame;
 std::chrono::nanoseconds bench_actions;
 std::chrono::nanoseconds bench_elements;
+std::chrono::nanoseconds bench_dsp;
 
 std::vector<std::string> commands;
 std::string command;
@@ -142,3 +147,4 @@ int cmd_index = 0;
 #define LOG(X) std::cout << "[Info] " << X << std::endl; 
 #define ERROR(X) std::cout << "[**Error**] " << X << std::endl;
 
+#define IS_SHIFT_DOWN IsKeyDown(KEY_LEFT_SHIFT)

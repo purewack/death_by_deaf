@@ -1,1 +1,6 @@
-{"x":42}
+{
+	"version" : 1.0
+	"title" : "default",
+	"mappings" : [],
+	"tracks" : []
+}

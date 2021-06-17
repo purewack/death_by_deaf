@@ -1,25 +1,15 @@
 onInit = function()
-Actions(true)
-Bench(true)
-Chain(true)
-Grid(true)
+	Actions(true)
+	Bench(true)
+	Chain(true)
+	--Grid(true)
+	--GridDiv(16)
+	loadfile("../utils/midi.lua")
 end
 
-GridDiv(16)
 print(GridW())
 print(GridH())
 
-clips = {}
-
-for x=0,3 do
-	clips[x] = AddVTimer()
-	clips[x].gx = 2.5+x
-	clips[x].gy = 1.5
-	clips[x].w = 40
-	clips[x].h = 40
-end
-clips[0].hue = 0
-clips[0].circular = false
 
 tex1 = CreateTexture("test_tex.png")
 img = AddVImage();
@@ -42,26 +32,6 @@ img2.tiles_count_y = 6
 img2.tile_x = 1
 img2.tile_y = 0
 
-btn = AddVButton(function ()
-clips[0].progress = 0
-
-AddVAction({
-	name="timer",
-	duration=2000,
-	action = function (dt)
-		clips[0].progress = dt/2000
-	end,
-	completion = function ()
-		clips[0].progress = 0
-	end,
-	singleton = false
-})
-	
-end);
-btn.w = 54
-btn.h = 54
-btn.ax = 0.0
-btn.ay = 0.0
 
 nxt = AddVButton(function()
 Present("scripts/screen2.lua")
@@ -81,29 +51,13 @@ nxt2.x = 500
 nxt2.y = 400
 
 sv = AddVButton(function ()
-
---Light(1,hue.red)
 onEnter()
-
---  local string = json.encode(t)
---	local file = io.open("saved.json","w")
---	io.output(file)
---	io.write(string)
---	io.close(file)
 end)
 sv.gx = 1
 sv.gy = 7
 
 nx = AddVButton(function ()
-
---Light(1,hue.red)
 onNavigation(true)
-
---  local string = json.encode(t)
---	local file = io.open("saved.json","w")
---	io.output(file)
---	io.write(string)
---	io.close(file)
 end)
 nx.gx = 2
 nx.gy = 7
