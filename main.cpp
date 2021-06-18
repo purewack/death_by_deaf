@@ -161,6 +161,7 @@ struct VLabel : public VElement{
 
 struct VButton : public VElement {
 	
+	VButton(){col = BLACK;}
 	virtual ~VButton(){};
 	bool state = false;
 	bool selected = false;
@@ -171,8 +172,8 @@ struct VButton : public VElement {
 		float yy = y - h*a_y;	
 		Rectangle r = {xx,yy,w,h};
 		DrawRectangleLines(xx,yy,w,h,WHITE);
-		if(state) DrawRectangle(xx+1,yy+1,w-2,h-2,col);
-		if(selected) DrawRectangleLines(xx-2,yy-2,w+4,h+4,col);
+		DrawRectangle(xx+2,yy+2,w-4,h-4,(state ? WHITE : col));
+		if(selected) DrawRectangleLines(xx-2,yy-2,w+4,h+4,WHITE);
 	}
 	
 	//void onPress();
@@ -240,7 +241,7 @@ void lua_init(){
 	elem["g"] = sol::property([](VElement* v){return v->col.g;}, [](VElement* v, float g){v->col.g = g;});
 	elem["b"] = sol::property([](VElement* v){return v->col.b;}, [](VElement* v, float b){v->col.b = b;});
 	elem["a"] = sol::property([](VElement* v){return v->col.a;}, [](VElement* v, float a){v->col.a = a;});
-	elem["hue"] = sol::property([](VElement* v){return ColorToHSV(v->col).x;}, [](VElement* v, float h){v->col = ColorFromHSV(h,1.0,1.0);});
+	elem["hue"] = sol::property([](VElement* v, float h){v->col = hueToHSV(h);});
 	elem["tag"] = &VElement::tag;
 	
 	auto lbl = lua.new_usertype<VLabel>("VLabel",sol::base_classes, sol::bases<VElement>());
@@ -264,7 +265,7 @@ void lua_init(){
 	auto btn = lua.new_usertype<VButton>("VButton",sol::base_classes, sol::bases<VElement>());
 	btn["selected"] = &VButton::selected;
 	btn["action"] = sol::property([](VButton* b, std::function<void(void)> f){b->onPress = f;});
-	btn["state"] = sol::property([](VButton* b, bool s){ b->state = s; if(b->onPress) b->onPress(); });
+	btn["state"] = sol::property([](VButton* b, bool s){ b->state = s; if(b->onPress and s) b->onPress(); });
 	
 	lua["CreateTexture"] = [](std::string t) -> Texture2D {
 		auto tex = LoadTexture((root+t).c_str());
@@ -719,7 +720,6 @@ void pollCtrl()
 	Vector2 m = GetMousePosition();
 	bool bb = IsMouseButtonDown(0);
 	static bool bo;
-	
 	for(auto e : elements)
 	{
 		if(VButton* b = dynamic_cast<VButton*>(e))
@@ -738,7 +738,6 @@ void pollCtrl()
 			}
 		}
 	}
-	
 	bo = bb;
 }
 
@@ -779,10 +778,8 @@ void pollMidi(){
 				n++;
 				if(n==3){
 					n = 0;
-					
 					m.parse(bytes);
 					LOG(m.print());
-					
 					checkEvent(&m);
 				}
 			}

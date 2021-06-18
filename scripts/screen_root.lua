@@ -50,9 +50,7 @@ nxt2.h = 40
 nxt2.x = 500
 nxt2.y = 400
 
-sv = AddVButton(function ()
-onEnter()
-end)
+sv = AddVButton()
 sv.gx = 1
 sv.gy = 7
 sv.tag = "sv"

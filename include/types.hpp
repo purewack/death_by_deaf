@@ -37,7 +37,7 @@ struct MidiData{
 		s = bytes[0] & 0xF0; //strip status byte
 		n = bytes[1]; //note
 		v = bytes[2]; //vel
-		if(s==MidiBytes::on and v == 0) {s=MidiBytes::off;}
+		if(s==MidiBytes::off) {s=MidiBytes::on; v=0;}
 	}
 	float range(float scaleMin, float scaleMax){
 		return scaleMin+((float(v)/127.0)*(scaleMax-scaleMin));
@@ -148,3 +148,22 @@ int cmd_index = 0;
 #define ERROR(X) std::cout << "[**Error**] " << X << std::endl;
 
 #define IS_SHIFT_DOWN IsKeyDown(KEY_LEFT_SHIFT)
+
+Color hueToHSV(int hue){
+	hue &= 127;
+	static const int uHueRed = 18;
+	static const int uHueOra = 26;
+	static const int uHueYel = 36;
+	static const int uHueGrn = 54;
+	static const int uHueCyn = 72;
+	static const int uHueBlu = 90;
+	static const int uHuePur = 108;
+	static const int uHueWht = 127;
+	float s = 1.0f;
+	float v = 1.0f;
+	float h = 290.f * ((float)(hue-uHueRed) / (float)(uHuePur-uHueRed));
+	if(hue < uHueRed) {v = (float)hue / (float)uHueRed; h = 0;} //fade from black
+	if(hue > uHuePur) {s = 1.0 - (float)(hue-uHuePur) / (float)(uHueWht-uHuePur);} //fade to white 
+
+	return ColorFromHSV(h,s,v);
+}
