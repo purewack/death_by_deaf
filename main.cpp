@@ -162,33 +162,17 @@ struct VLabel : public VElement{
 struct VButton : public VElement {
 	
 	virtual ~VButton(){};
+	bool state = false;
 	bool selected = false;
-	bool togglable = false;
-	bool toggled = false;
 	std::function<void(void)> onPress = nullptr;
 	
 	void draw() override {	
 		float xx = x - w*a_x;
 		float yy = y - h*a_y;	
 		Rectangle r = {xx,yy,w,h};
-		DrawRectangleLines(xx,yy,w,h,col);
-		
-		if(togglable){
-			if(toggled) DrawRectangle(xx+2,yy+2,w-4,h-4,col);
-			if(CheckCollisionPointRec(GetMousePosition(),r) and IsMouseButtonPressed(0) and onPress and not IS_SHIFT_DOWN){
-				if(not toggled) onPress();
-				toggled = not toggled;
-			}
-		}
-		else if(CheckCollisionPointRec(GetMousePosition(),r)){
-			DrawRectangle(xx+2,yy+2,w-4,h-4,col);
-			if(IsMouseButtonPressed(0) and onPress and not IS_SHIFT_DOWN){
-				onPress();
-			}
-		}
-		
-		if(selected)
-		DrawRectangleLines(xx-2,yy-2,w+4,h+4,col);
+		DrawRectangleLines(xx,yy,w,h,WHITE);
+		if(state) DrawRectangle(xx+1,yy+1,w-2,h-2,col);
+		if(selected) DrawRectangleLines(xx-2,yy-2,w+4,h+4,col);
 	}
 	
 	//void onPress();
@@ -278,9 +262,9 @@ void lua_init(){
 	timer["invert"] = &VTimer::invert;
 	
 	auto btn = lua.new_usertype<VButton>("VButton",sol::base_classes, sol::bases<VElement>());
-	btn["toggle"] = &VButton::togglable;
 	btn["selected"] = &VButton::selected;
 	btn["action"] = sol::property([](VButton* b, std::function<void(void)> f){b->onPress = f;});
+	btn["state"] = sol::property([](VButton* b, bool s){ b->state = s; if(b->onPress) b->onPress(); });
 	
 	lua["CreateTexture"] = [](std::string t) -> Texture2D {
 		auto tex = LoadTexture((root+t).c_str());
@@ -587,21 +571,21 @@ void screen(){
 		
 		BeginDrawing();
 		ClearBackground(BLACK);
-		
-		mtx_lua.lock();
 		auto timer_fps = new ScopedTimer(&bench_fps);
-		auto timer_frame = new ScopedTimer(&bench_frame);
-		if(onFrame) onFrame();
-		delete timer_frame;
-		if(onUIFrame) onUIFrame();
-		mtx_lua.unlock();
 		
+		{
+			std::lock_guard<std::mutex> lg(mtx_fps);
+			auto timer_frame = new ScopedTimer(&bench_frame);
+			if(onFrame) onFrame();
+			if(onUIFrame) onUIFrame();
+		}
+		
+		{
+		std::lock_guard<std::mutex> lg(mtx_fps);
 		do_elements();
-		
-		mtx_lua.lock();
 		do_actions();
-		mtx_lua.unlock();
-		
+		}
+
 		if(not message_text.empty() and message_timer.count() > 0){
 			DrawRectangle(0,0,640,64,{255,255,255,64});
 			DrawString(message_text,320,32,32,WHITE,0.5,0.5);
@@ -656,9 +640,10 @@ void screen(){
 		
 		EndDrawing();
 		
-		mtx_lua.lock();
+		{
+		std::lock_guard<std::mutex> lg(mtx_fps);
 		check_script();
-		mtx_lua.unlock();
+		}
 	}
 	CloseWindow();
 }
@@ -705,9 +690,15 @@ int main(int argc, char* argv[]) {
 	init();
 	
 	static bool running = true;
-	std::thread t([=](){
+	std::thread thread_midi_poll([=](){
 		while(running){
 			pollMidi();
+			usleep(5000);
+		}
+	});
+	std::thread thread_ctrl_poll([=](){
+		while(running){
+			pollCtrl();
 			usleep(5000);
 		}
 	});
@@ -715,12 +706,41 @@ int main(int argc, char* argv[]) {
 	screen();	
 	
 	running = false;
-	t.join();
+	thread_midi_poll.join();
+	thread_ctrl_poll.join();
 	
 	return 0;
 }
 
 
+void pollCtrl()
+{
+	std::lock_guard<std::mutex> lg(mtx_fps);
+	Vector2 m = GetMousePosition();
+	bool bb = IsMouseButtonDown(0);
+	static bool bo;
+	
+	for(auto e : elements)
+	{
+		if(VButton* b = dynamic_cast<VButton*>(e))
+		{	
+			float xx = b->x - b->w*b->a_x;
+			float yy = b->y - b->h*b->a_y;
+			auto r = Rectangle{xx,yy,b->w,b->h};
+			if(CheckCollisionPointRec(m,r)){
+				if(not b->state and bb and not bo){
+					b->state = true;
+					if(b->onPress) b->onPress();
+				}
+				else if(b->state and not bb and bo){
+					b->state = false;
+				}
+			}
+		}
+	}
+	
+	bo = bb;
+}
 
 void pollMidi(){
 	//connection management
@@ -771,7 +791,6 @@ void pollMidi(){
 }
 
 void checkEvent(MidiData* m){
-	mtx_lua.lock();
+	std::lock_guard<std::mutex> lg(mtx_fps);
 	lua["checkMidi"](m->s,m->n,m->v);
-	mtx_lua.unlock();
 }

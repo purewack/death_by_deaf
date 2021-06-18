@@ -18,7 +18,7 @@ std::string sesh;
 int g_div = 8;
 
 sol::state lua;
-std::mutex mtx_lua;
+std::mutex mtx_fps;
 
 enum MidiBytes: int{
 	on = 144, //x90
@@ -85,7 +85,7 @@ struct MidiElement{
 
 void pollMidi();
 void checkEvent(MidiData* m);
-
+void pollCtrl();
 
 struct VElement;
 struct VAction;
