@@ -11,6 +11,8 @@ LFLAGS += -L/opt/vc/lib
 LLIBS += -ldl -lGL -lX11 -lrt -lbrcmGLESv2 -lbrcmEGL -lbcm_host
 endif
 
-
 all:
 	g++ $(IFLAGS) main.cpp $(LFLAGS) -o lua_motif 
+	
+run:
+	./lua_motif

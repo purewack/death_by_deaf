@@ -1,5 +1,4 @@
 #define SOL_ALL_SAFETIES_ON 1
-#include <functional>
 #include "sol/sol.hpp" // or #include "sol.hpp", whichever suits your needs
 #include <raylib.h>
 #include "types.hpp"
@@ -30,7 +29,6 @@ void execCommand(){
 	command = "";
 	cmd_index = commands.size();
 }
-
 
 struct VAction{
 	fpstime time_to_take;
@@ -174,8 +172,7 @@ struct VButton : public VElement {
 		DrawRectangleLines(xx,yy,w,h,WHITE);
 		DrawRectangle(xx+2,yy+2,w-4,h-4,(state ? WHITE : col));
 		if(selected) DrawRectangleLines(xx-2,yy-2,w+4,h+4,WHITE);
-	}
-	
+	}	
 	//void onPress();
 };
 
@@ -211,7 +208,6 @@ struct VTimer : public VElement {
 	}
 };
 
-void script();
 void lua_init(){
 	
 	lua.open_libraries(sol::lib::base);
@@ -417,7 +413,8 @@ void lua_init(){
 		if(onFrame) onFrame = nullptr;
 		else onFrame = lua["onFrame"];
 	};
-}
+};
+
 void script(){
 	onFrame = nullptr;
 	onUIFrame = nullptr;
@@ -456,13 +453,15 @@ void script(){
 	}
 	
 	
-}
+};
+
 void check_script(){
 	if((IsKeyPressed(KEY_R) and IS_SHIFT_DOWN and not in_console) or reload){
 		script();
 		reload = false;
 	}		
-}
+};
+
 void do_actions(){
 	auto timer_actions = new ScopedTimer(&bench_actions);
 	if(actions_view) DrawString("Actions:",0,0,16,GRAY);
@@ -488,7 +487,7 @@ void do_actions(){
 		actions.end()
 	);
 	delete timer_actions;
-}
+};
 
 void do_elements(){
 	auto timer_elem = new ScopedTimer(&bench_elements);
@@ -690,15 +689,10 @@ int main(int argc, char* argv[]) {
 	
 	init();
 	
-	static bool running = true;
-	std::thread thread_midi_poll([=](){
+	static std::atomic_bool running = true;
+	std::thread thread_input([=](){
 		while(running){
 			pollMidi();
-			usleep(5000);
-		}
-	});
-	std::thread thread_ctrl_poll([=](){
-		while(running){
 			pollCtrl();
 			usleep(5000);
 		}
@@ -707,8 +701,7 @@ int main(int argc, char* argv[]) {
 	screen();	
 	
 	running = false;
-	thread_midi_poll.join();
-	thread_ctrl_poll.join();
+	thread_input.join();
 	
 	return 0;
 }
