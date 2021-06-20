@@ -50,7 +50,30 @@ nxt2.h = 40
 nxt2.x = 500
 nxt2.y = 400
 
-sv = AddVButton()
+sv = AddVButton(function()
+    first = {
+        duration = 2000,
+        action = function (dt)
+            if dt == 0 then
+                print("first")
+            end
+        end
+    };
+    waitt = {
+        duration = 1000
+    }
+    second = {
+        duration = 3000,
+        action = function (dt)
+            if dt == 0 then
+                print("second")
+            end
+        end
+    }
+    
+    AddVSequence({first,waitt,second})
+    --AddVAction({first,wait,second})
+end)
 sv.gx = 1
 sv.gy = 7
 sv.tag = "sv"

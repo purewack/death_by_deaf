@@ -22,6 +22,8 @@ int g_div = 8;
 sol::state lua;
 std::mutex mtx_fps;
 
+void tests();
+
 enum MidiBytes: int{
 	on = 144, //x90
 	off = 128, //x80
@@ -93,8 +95,9 @@ void pollMidi();
 void checkEvent(MidiData* m);
 void pollCtrl();
 
-struct VElement;
 struct VAction;
+struct VSequence;
+struct VElement;
 struct VImage;
 struct VLabel;
 struct VButton;
@@ -107,7 +110,7 @@ Vector2 DrawString(std::string str ,float x, float y, float s = 16, Color c = WH
 std::vector<Texture2D> textures_in_script;
 std::vector<std::string> chain;
 std::string current_script;
-std::vector<VAction*> actions;
+std::vector<VSequence*> actions;
 std::vector<VElement*> elements;
 std::function<void(void)> onFrame = nullptr;
 std::function<void(void)> onUIFrame = nullptr;

@@ -31,12 +31,19 @@ void execCommand(){
 }
 
 struct VAction{
+	//std::string name;
 	fpstime time_to_take;
+    sol::function action;
+};
+struct VSequence{
+    int count;
+    std::vector<VAction*> actions;
 	fpstime time_current;
 	float exec_ratio;
-	std::string name;
-	sol::function action;
-	sol::function completion;
+    ~VSequence(){
+    	for(auto a : actions) delete a;
+    	actions.clear();
+    }
 };
 
 struct VElement{
@@ -337,40 +344,60 @@ void lua_init(){
 		v->bound_box = not v->bound_box;
 	};
 	
-	
-	lua["CancelVAction"] = [](std::string withName){
-		actions.erase(std::remove_if(
-			actions.begin(), 
-            actions.end(),
-            [=](auto a){
-            	if(a->name == withName){
-					return true;
-            	}
-            	return false;
-            }),
-            actions.end()
-        );
-	};
+	    //
+    // lua["CancelVAction"] = [](std::string withName){
+    //     actions.erase(std::remove_if(
+    //         actions.begin(),
+    //             actions.end(),
+    //             [=](auto a){
+    //                 if(a->name == withName){
+    //                 return true;
+    //                 }
+    //                 return false;
+    //             }),
+    //             actions.end()
+    //         );
+    // };
 	
 	lua["AddVAction"] = [](sol::table ac){
 		
 		auto a = new VAction();
-		a->time_to_take = std::chrono::duration_cast<fpstime>(std::chrono::milliseconds{ac["duration"]});
-		a->time_current = fpstime{0};
+        a->time_to_take = std::chrono::duration_cast<fpstime>(std::chrono::milliseconds{ac["duration"]});
 		a->action = ac["action"];
-		a->completion = ac["completion"];
-		a->exec_ratio = 0.0f;
+        
+        auto s = new VSequence();
+		s->time_current = fpstime{0};
+	    s->actions.push_back(a);
+        s->exec_ratio = 0.0f;
+        s->count = 1;
+		//sol::optional<std::string> n = ac["name"];
+		//if(n == sol::nullopt) a->name = "default";
+		//else a->name = ac["name"];
 		
-		sol::optional<std::string> n = ac["name"];
-		if(n == sol::nullopt) a->name = "default";
-		else a->name = ac["name"];
+		// if(a->name != "default" and ac["singleton"] == true){
+//             lua["CancelVAction"](a->name);
+//         }
 		
-		if(a->name != "default" and ac["singleton"] == true){
-			lua["CancelVAction"](a->name);
-		}
-		
-		actions.push_back(a);
+		actions.push_back(s);
 	};
+    
+    lua["AddVSequence"]= [](sol::table ac){
+        auto s = new VSequence();
+		s->time_current = fpstime{0};
+        s->exec_ratio = 0.0f;
+        s->count = 0;
+
+        ac.for_each([=](sol::object const& key, sol::object const& value) {
+            auto t = value.as<sol::table>();
+    		auto a = new VAction();
+            a->time_to_take = std::chrono::duration_cast<fpstime>(std::chrono::milliseconds{t["duration"]});
+    		a->action = t["action"];
+            s->actions.push_back(a);
+            s->count += 1;
+        });
+        
+		actions.push_back(s);
+    };
 	
 	lua["Message"] = [](std::string msg){
 		message_text = msg;
@@ -466,20 +493,36 @@ void do_actions(){
 	auto timer_actions = new ScopedTimer(&bench_actions);
 	if(actions_view) DrawString("Actions:",0,0,16,GRAY);
 	int yy = 1;
-	for (auto a : actions){
-		a->action(std::chrono::duration_cast<std::chrono::milliseconds>(a->time_current).count());
-		a->time_current += fpstime{1};
-		a->exec_ratio = float(a->time_current.count()) / float(a->time_to_take.count());
-		
-		if(actions_view)
-		DrawString("[" + std::to_string(int(a->exec_ratio*100)) + "%] -> " + a->name, 0, 16*yy++, 16, GRAY);
+	for (auto seq : actions){
+        if(seq->actions.size() == 0) continue;
+        
+        auto ac = seq->actions.front();
+        ac->action(std::chrono::duration_cast<std::chrono::milliseconds>(seq->time_current).count());
+		seq->time_current += fpstime{1};
+		seq->exec_ratio = float(seq->time_current.count()) / float(ac->time_to_take.count());
+        
+        if(actions_view) {
+            auto bounds = DrawString("("
+            + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(ac->time_to_take).count())
+            + "ms):" 
+            + std::to_string(seq->count - seq->actions.size() + 1)
+            + "/" + std::to_string(seq->count)
+                , 0, 16*yy, 16, WHITE);
+            DrawRectangle(0,16*yy++, bounds.x*seq->exec_ratio, 16,{0,255,0,64});
+        }
+	 
+		//DrawString("[" + std::to_string(int(a->exec_ratio*100)) + "%] -> " + ac->name, 0, 16*yy++, 16, GRAY);
+    	
+        if(seq->time_current >= ac->time_to_take and seq->actions.size()){
+            seq->actions.erase(seq->actions.begin());
+            seq->time_current = fpstime{0};
+        }    
 	}
 	actions.erase(std::remove_if(
 		actions.begin(), 
 		actions.end(),
 		[](auto a){
-			if(a->time_current >= a->time_to_take){
-				a->completion();
+			if(a->actions.size() == 0){
 				return true;
 			}
 			return false;
@@ -655,58 +698,6 @@ Vector2 DrawString(std::string str ,float x, float y, float s, Color c, float an
 	return bounds;
 }
 
-	
-	
-void init(){
-	InitWindow(S_WIDTH,S_HEIGHT_T,"scripter");
-	SetTargetFPS(30);
-	auto fixedsys = LoadFont((root + "fixedsys.ttf").c_str());
-	auto consolas = LoadFont((root + "Consolas.ttf").c_str());
-	fonts.push_back(fixedsys);
-	fonts.push_back(consolas);
-	commands.push_back("");
-	command = "";
-	
-	lua_init();
-	script();
-	
-	try{
-		lua["onInit"]();
-	}
-	catch(std::exception ex){
-		script_error = true;
-		LOG("onLoad error");
-	}
-	
-}
-
-int main(int argc, char* argv[]) {
-	
-	makeRoot(argv[0]);
-		
-	current_script = "scripts/screen_root.lua";
-	chain.push_back(current_script);
-	
-	init();
-	
-	static std::atomic_bool running = true;
-	std::thread thread_input([=](){
-		while(running){
-			pollMidi();
-			pollCtrl();
-			usleep(5000);
-		}
-	});
-	
-	screen();	
-	
-	running = false;
-	thread_input.join();
-	
-	return 0;
-}
-
-
 void pollCtrl()
 {
 	std::lock_guard<std::mutex> lg(mtx_fps);
@@ -738,7 +729,7 @@ void pollMidi(){
 	//connection management
 	unsigned int nDevicesCount = scanner.getPortCount();
 	if(nDevicesCount != devicesCount){
-		LOG((nDevicesCount > devicesCount ? "Device connect" : "Device disconnect"));
+		LOG((nDevicesCount > devicesCount ? "Midi connect" : "Midi disconnect"));
 		for( RtMidiIn* d : devices ){
 			d->closePort();
 		}
@@ -783,4 +774,57 @@ void pollMidi(){
 void checkEvent(MidiData* m){
 	std::lock_guard<std::mutex> lg(mtx_fps);
 	lua["checkMidi"](m->s,m->n,m->v);
+}
+	
+void init(){
+	InitWindow(S_WIDTH,S_HEIGHT_T,"scripter");
+	SetTargetFPS(30);
+	auto fixedsys = LoadFont((root + "fixedsys.ttf").c_str());
+	auto consolas = LoadFont((root + "Consolas.ttf").c_str());
+	fonts.push_back(fixedsys);
+	fonts.push_back(consolas);
+	commands.push_back("");
+	command = "";
+	
+	lua_init();
+	script();
+	
+	try{
+		lua["onInit"]();
+	}
+	catch(std::exception ex){
+		script_error = true;
+		LOG("onLoad error");
+	}
+	
+}
+
+int main(int argc, char* argv[]) {
+	
+	makeRoot(argv[0]);
+		
+	current_script = "scripts/screen_root.lua";
+	chain.push_back(current_script);
+	
+	init();
+    tests();
+	static std::atomic_bool running = true;
+	std::thread thread_input([=](){
+		while(running){
+			pollMidi();
+			pollCtrl();
+			usleep(5000);
+		}
+	});
+	
+	screen();	
+	
+	running = false;
+	thread_input.join();
+	
+	return 0;
+}
+
+void tests(){
+    
 }
