@@ -867,10 +867,18 @@ void init()
 {
 	InitWindow(S_WIDTH,S_HEIGHT_T,"scripter");
 	SetTargetFPS(30);
-	auto fixedsys = LoadFont((root + "fixedsys.ttf").c_str());
-	auto consolas = LoadFont((root + "Consolas.ttf").c_str());
+	auto fixedsys = LoadFont((root + "gfx/fixedsys.ttf").c_str());
+	auto consolas = LoadFont((root + "gfx/Consolas.ttf").c_str());
+	auto lekton = LoadFont((root + "gfx/Lekton-Regular.ttf").c_str());
+	auto droid = LoadFont((root + "gfx/DroidSerif.ttf").c_str());
+	auto anony = LoadFont((root + "gfx/AnonymousPro-Regular.ttf").c_str());
+	auto digital = LoadFont((root + "gfx/digital-7(mono).ttf").c_str());
 	fonts.push_back(fixedsys);
 	fonts.push_back(consolas);
+	fonts.push_back(lekton);
+	fonts.push_back(droid);
+	fonts.push_back(anony);
+	fonts.push_back(digital);
 	commands.push_back("");
 	command = "";
 	
