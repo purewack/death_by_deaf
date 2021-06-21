@@ -73,9 +73,6 @@ onUIReload = function ()
 	
 	for c=1,23 do
 		controls[c].tag = c_names[c]
-		-- controls[c].action = function ()
---             checkMidi(ev_note_on,c)
---         end
 	end	
 
 end

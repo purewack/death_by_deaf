@@ -6,7 +6,7 @@
 		"event_action" : "print(\"system.shift(ev_vel)\")"
 	},
 	{   
-        "device" : 0,
+        "device" : 1,
 		"event" : 144,
 		"event_key" : 2,
 		"event_action" : "print(\"transport.stop()\")"

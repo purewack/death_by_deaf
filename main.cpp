@@ -791,6 +791,18 @@ void pollCtrl()
                   
 			}
 		}
+        else if(VButton* b = dynamic_cast<VButton*>(e))
+		{	
+			float xx = b->x - b->w*b->a_x;
+			float yy = b->y - b->h*b->a_y;
+			auto r = Rectangle{xx,yy,b->w,b->h};
+			if(CheckCollisionPointRec(m,r)){				
+                if((not b->state and bb and not bo) or (b->state and not bb and bo)){
+					b->state = bb;
+                    if(b->onPress) b->onPress();
+				}                 
+			}
+		}
 	}
 	bo = bb;
 }
