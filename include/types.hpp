@@ -30,9 +30,10 @@ enum MidiBytes: int{
 	cc = 176, //xb0
 };
 struct MidiData{
-	//int w = 0; //who
+	
+    int w = 0; //who
 	int c = 0; //channel
-	int s = 0; //status
+	int s = 0; //status/event (channel stripped)
 	int n = 0; //note
 	int v = 0; //vel
 
@@ -48,14 +49,13 @@ struct MidiData{
 	}
 
 	bool operator==(const MidiData &m) const {
-		return (c==m.c and s==m.s and n==m.n);
+		return (w==m.w and c==m.c and s==m.s and n==m.n);
 	}
 	bool operator< (const MidiData &m) const {
-		return (c<m.c  or  s<m.s  or  n<m.n);
+		return (w<m.w or c<m.c or s<m.s or n<m.n);
 	}
 	std::string print(){
-		//"{" + std::to_string(w) + "}" +
-		return  "[" + std::to_string(c) + "]" + (s==MidiBytes::cc ? "CC " : "Note ") + " " + std::to_string(s) + " " + std::to_string(n) + " " + std::to_string(v);
+		return  std::to_string(w) +"->[" + std::to_string(c) + "]" + (s==MidiBytes::cc ? "CC " : "Note ") + " " + std::to_string(s) + " " + std::to_string(n) + " " + std::to_string(v);
 	}
 };
 
@@ -109,6 +109,7 @@ Vector2 DrawString(std::string str ,float x, float y, float s = 16, Color c = WH
 
 std::vector<Texture2D> textures_in_script;
 std::vector<std::string> chain;
+std::vector<std::string> mevents;
 std::string current_script;
 std::vector<VSequence*> actions;
 std::vector<VElement*> elements;
@@ -124,6 +125,7 @@ bool layout_grid = false;
 bool actions_view = false;
 bool bench_view = false;
 bool chain_view = false;
+bool midi_view = false;
 bool in_console = false;
 bool reload = false;
 bool shift_down = false;

@@ -5,8 +5,8 @@ key_stop = 2
 key_rec = 3
 key_play = 4
 key_pad1 = 5
-key_less = 21
-key_ok = 22
+key_ok = 21
+key_less = 22
 key_more = 23
 
 loadfile(root .. "scripts/midi.lua")()
@@ -27,24 +27,26 @@ onUIReload = function ()
 	c_names[key_ok] = "key_ok"
 
 	for c=1,4 do
-		controls[c] = AddVButton() 
+		controls[c] = AddVUnitButton(c) 
 		controls[c].gx = 0
 		controls[c].x = controls[c].x + 32*c
 		controls[c].y = 550
 		controls[c].ax = 0
 	end
 	
-	controls[key_less] = AddVButton()
-	controls[key_more] = AddVButton()
-	controls[key_ok] = AddVButton()
+	controls[key_less] = AddVUnitButton(key_less)
+	controls[key_more] = AddVUnitButton(key_more)
+	controls[key_ok] = AddVUnitButton(key_ok)
 	
 	cc = controls[key_less] 
+    cc.type = 176
 	cc.ax = 0
 	cc.y = 530
 	cc.x = controls[1].x
 	cc.w = cc.w *2 
 
-	cc = controls[key_more] 
+	cc = controls[key_more]
+    cc.type = 176 
 	cc.ax = 1
 	cc.y = 530
 	cc.x = controls[key_play].x + controls[key_play].w
@@ -61,7 +63,7 @@ onUIReload = function ()
 	j = key_pad1
 	for y=1,4 do
 		for x=1,4 do
-			controls[j] = AddVButton()
+			controls[j] = AddVUnitButton(j)
 			controls[j].x = sx + x*20 
 			controls[j].y = sy - (y-1)*20
 			controls[j].ay = 1.0
@@ -71,9 +73,9 @@ onUIReload = function ()
 	
 	for c=1,23 do
 		controls[c].tag = c_names[c]
-		controls[c].action = function ()
-			checkMidi(ev_note_on,c)
-		end
+		-- controls[c].action = function ()
+--             checkMidi(ev_note_on,c)
+--         end
 	end	
 
 end

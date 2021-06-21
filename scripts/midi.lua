@@ -32,9 +32,9 @@ function remapMidi(ev,note,vel,code)
 
 end
 
-function checkMidi(ev,note,vel)
+function checkMidi(w,ev,note,vel)
 	action = map[ev][note]
-	if action then
+	if action and vel > 0 then
 		ev_vel = vel
 		action()
 	end

@@ -30,6 +30,14 @@ void execCommand(){
 	cmd_index = commands.size();
 }
 
+Vector2 DrawString(std::string str ,float x, float y, float s, Color c, float anchorX, float anchorY, Font f)
+{
+	Vector2 bounds = MeasureTextEx(f,str.c_str(),s,0);
+	Vector2 pos = {x - bounds.x*anchorX, y- bounds.y*anchorY};
+	DrawTextEx(f,str.c_str(), pos, s, 0, c);
+	return bounds;
+}
+
 struct VAction{
 	std::string name;
 	fpstime time_to_take;
@@ -184,6 +192,12 @@ struct VButton : public VElement {
 	//void onPress();
 };
 
+struct VUnitButton : public VButton {
+	virtual ~VUnitButton(){};
+    int note = 0;
+    int type = MidiBytes::on;
+};
+
 struct VTimer : public VElement {
 
 	float progress = 0.0f;
@@ -216,7 +230,8 @@ struct VTimer : public VElement {
 	}
 };
 
-void lua_init(){
+void lua_init()
+{
 	
 	lua.open_libraries(sol::lib::base);
 	lua.open_libraries(sol::lib::table);
@@ -271,6 +286,10 @@ void lua_init(){
 	btn["action"] = sol::property([](VButton* b, std::function<void(void)> f){b->onPress = f;});
 	btn["state"] = sol::property([](VButton* b, bool s){ b->state = s; if(b->onPress and s) b->onPress(); });
 	
+	auto ubtn = lua.new_usertype<VUnitButton>("VUnitButton",sol::base_classes, sol::bases<VButton,VElement>());
+	ubtn["note"] = &VUnitButton::note;
+    ubtn["type"] = &VUnitButton::type;
+    
 	lua["CreateTexture"] = [](std::string t) -> Texture2D {
 		auto tex = LoadTexture((root+t).c_str());
 		textures_in_script.push_back(tex);
@@ -295,15 +314,21 @@ void lua_init(){
 		elements.push_back(l);
 		return l;
 	};
-	lua["AddVLabel"] = [](std::string s) -> VLabel* { 
-		auto l = new VLabel();
-		l->text = s;
-		elements.push_back(l);
-		return l;
-	};
 	lua["AddVButton"] = [](sol::function f) -> VButton* { 
 		auto l = new VButton();
 		l->onPress = f;
+		elements.push_back(l);
+		return l;
+	};
+    lua["AddVUnitButton"] = [](int note) -> VUnitButton* { 
+		auto l = new VUnitButton();
+		l->note = note;
+		elements.push_back(l);
+		return l;
+	};
+	lua["AddVLabel"] = [](std::string s) -> VLabel* { 
+		auto l = new VLabel();
+		l->text = s;
 		elements.push_back(l);
 		return l;
 	};
@@ -453,6 +478,9 @@ void lua_init(){
 	lua["Chain"] = [](bool state){
 		chain_view = state;
 	};
+	lua["Midi"] = [](bool state){
+		midi_view = state;
+	};
 	
 	lua["Present"] = [](std::string scr){
 		current_script = scr;
@@ -508,16 +536,19 @@ void script(){
 	}
 	
 	
-};
+}
+;
 
-void check_script(){
+void check_script()
+{
 	if((IsKeyPressed(KEY_R) and IS_SHIFT_DOWN and not in_console) or reload){
 		script();
 		reload = false;
 	}		
 };
 
-void do_actions(){
+void do_actions()
+{
 	auto timer_actions = new ScopedTimer(&bench_actions);
 	if(actions_view) DrawString("Actions:",0,0,16,GRAY);
 	int yy = 1;
@@ -562,7 +593,8 @@ void do_actions(){
 	delete timer_actions;
 };
 
-void do_elements(){
+void do_elements()
+{
 	auto timer_elem = new ScopedTimer(&bench_elements);
 	for(auto e : elements){
 		e->update();
@@ -570,7 +602,8 @@ void do_elements(){
 	delete timer_elem;
 }
 
-void do_grid(){
+void do_grid()
+{
 	if(layout_grid){
 		const float dx = float(S_WIDTH)/float(g_div);
 		const float dy = float(S_HEIGHT)/float(g_div);
@@ -601,7 +634,8 @@ void do_grid(){
 	}
 }
 
-void do_console(){
+void do_console()
+{
 	
 	if(in_console){
 		int c = GetCharPressed();
@@ -639,7 +673,8 @@ void do_console(){
 
 }
 
-void screen(){
+void screen()
+{
 	while(not WindowShouldClose()){
 		
 		BeginDrawing();
@@ -708,7 +743,15 @@ void screen(){
 				DrawString(s,16*x++,S_HEIGHT-16*y++,16,WHITE,0.0,1.0);
 			}
 		}
-			
+		if(midi_view){
+			int y = 0;
+			int x = 0;
+			for(auto s : mevents){
+				DrawString(s,S_WIDTH-16,S_HEIGHT-16*y,16,{255,255,255,127+(127*(5-y)/5)},1.0,1.0);
+			    y++;
+            }
+		}
+            
 		do_console();
 		
 		EndDrawing();
@@ -721,41 +764,39 @@ void screen(){
 	CloseWindow();
 }
 
-Vector2 DrawString(std::string str ,float x, float y, float s, Color c, float anchorX, float anchorY, Font f){
-	Vector2 bounds = MeasureTextEx(f,str.c_str(),s,0);
-	Vector2 pos = {x - bounds.x*anchorX, y- bounds.y*anchorY};
-	DrawTextEx(f,str.c_str(), pos, s, 0, c);
-	return bounds;
-}
-
 void pollCtrl()
 {
-	std::lock_guard<std::mutex> lg(mtx_fps);
 	Vector2 m = GetMousePosition();
 	bool bb = IsMouseButtonDown(0);
 	static bool bo;
 	for(auto e : elements)
 	{
-		if(VButton* b = dynamic_cast<VButton*>(e))
+		if(VUnitButton* b = dynamic_cast<VUnitButton*>(e))
 		{	
 			float xx = b->x - b->w*b->a_x;
 			float yy = b->y - b->h*b->a_y;
 			auto r = Rectangle{xx,yy,b->w,b->h};
 			if(CheckCollisionPointRec(m,r)){
-				if(not b->state and bb and not bo){
-					b->state = true;
-					if(b->onPress) b->onPress();
+                MidiData m;
+                m.w = 0;
+                m.c = 0;
+                m.s = b->type;
+				
+                if((not b->state and bb and not bo) or (b->state and not bb and bo)){
+					b->state = bb;
+                    m.n = b->note;
+                    m.v = b->state*127;
+                    checkEvent(&m);
 				}
-				else if(b->state and not bb and bo){
-					b->state = false;
-				}
+                  
 			}
 		}
 	}
 	bo = bb;
 }
 
-void pollMidi(){
+void pollMidi()
+{
 	//connection management
 	unsigned int nDevicesCount = scanner.getPortCount();
 	if(nDevicesCount != devicesCount){
@@ -792,8 +833,9 @@ void pollMidi(){
 				n++;
 				if(n==3){
 					n = 0;
+                    m.w = d;
 					m.parse(bytes);
-					LOG(m.print());
+					//LOG(m.print());
 					checkEvent(&m);
 				}
 			}
@@ -801,12 +843,16 @@ void pollMidi(){
 	}
 }
 
-void checkEvent(MidiData* m){
+void checkEvent(MidiData* m)
+{
 	std::lock_guard<std::mutex> lg(mtx_fps);
-	lua["checkMidi"](m->s,m->n,m->v);
+	lua["checkMidi"](m->w,m->s,m->n,m->v);
+    mevents.insert(mevents.begin(),m->print());
+    if(mevents.size() > 5) mevents.pop_back();
 }
 	
-void init(){
+void init()
+{
 	InitWindow(S_WIDTH,S_HEIGHT_T,"scripter");
 	SetTargetFPS(30);
 	auto fixedsys = LoadFont((root + "fixedsys.ttf").c_str());
@@ -829,7 +875,8 @@ void init(){
 	
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) 
+{
 	
 	makeRoot(argv[0]);
 		
