@@ -31,11 +31,12 @@ void execCommand(){
 }
 
 struct VAction{
-	//std::string name;
+	std::string name;
 	fpstime time_to_take;
     sol::function action;
 };
 struct VSequence{
+    std::string name;
     int count;
     std::vector<VAction*> actions;
 	fpstime time_current;
@@ -344,23 +345,32 @@ void lua_init(){
 		v->bound_box = not v->bound_box;
 	};
 	
-	    //
-    // lua["CancelVAction"] = [](std::string withName){
-    //     actions.erase(std::remove_if(
-    //         actions.begin(),
-    //             actions.end(),
-    //             [=](auto a){
-    //                 if(a->name == withName){
-    //                 return true;
-    //                 }
-    //                 return false;
-    //             }),
-    //             actions.end()
-    //         );
-    // };
+	 
+    lua["CancelVSequence"] = [](std::string withName){
+        actions.erase(std::remove_if(
+            actions.begin(),
+                actions.end(),
+                [=](auto s){
+                    if(s->name == withName){
+                    return true;
+                    }
+                    return false;
+                }),
+                actions.end()
+            );
+    };
 	
-	lua["AddVAction"] = [](sol::table ac){
+	lua["AddVAction"] = [](sol::table ac,sol::optional<std::string> name){
 		
+        /*
+        AddVAction({
+            duration = 1000, <- ms
+            action = function()
+                print("test action")
+            end
+        },"action key")
+        */
+        
 		auto a = new VAction();
         a->time_to_take = std::chrono::duration_cast<fpstime>(std::chrono::milliseconds{ac["duration"]});
 		a->action = ac["action"];
@@ -370,22 +380,40 @@ void lua_init(){
 	    s->actions.push_back(a);
         s->exec_ratio = 0.0f;
         s->count = 1;
-		//sol::optional<std::string> n = ac["name"];
-		//if(n == sol::nullopt) a->name = "default";
-		//else a->name = ac["name"];
-		
-		// if(a->name != "default" and ac["singleton"] == true){
-//             lua["CancelVAction"](a->name);
-//         }
-		
+        
+        if(name == sol::nullopt) s->name = "default";
+        else s->name = name.value();
+        
 		actions.push_back(s);
 	};
     
-    lua["AddVSequence"]= [](sol::table ac){
+    lua["AddVSequence"]= [](sol::table ac,sol::optional<std::string> name){
+        /*
+        AddVSequnece(
+        {
+            {
+                duration = 1000, <- ms
+                action = function()
+                    print("first action")
+                end
+            },
+            {
+                duration = 2000, <- ms
+                action = function()
+                    print("next action")
+                end
+            }
+        },"actions key")
+        */
+        
         auto s = new VSequence();
 		s->time_current = fpstime{0};
         s->exec_ratio = 0.0f;
         s->count = 0;
+	    
+        if(name == sol::nullopt) s->name = "default";
+        else s->name = name.value();
+        LOG(s->name);
 
         ac.for_each([=](sol::object const& key, sol::object const& value) {
             auto t = value.as<sol::table>();
@@ -505,6 +533,8 @@ void do_actions(){
             auto bounds = DrawString("("
             + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(ac->time_to_take).count())
             + "ms):" 
+            + seq->name
+            + ":"
             + std::to_string(seq->count - seq->actions.size() + 1)
             + "/" + std::to_string(seq->count)
                 , 0, 16*yy, 16, WHITE);

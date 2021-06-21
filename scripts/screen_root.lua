@@ -51,6 +51,7 @@ nxt2.x = 500
 nxt2.y = 400
 
 sv = AddVButton(function()
+    
     first = {
         duration = 2000,
         action = function (dt)
@@ -70,9 +71,8 @@ sv = AddVButton(function()
             end
         end
     }
-    
-    AddVSequence({first,waitt,second})
-    --AddVAction({first,wait,second})
+    --CancelVAction("lol")
+    AddVSequence({first,waitt,second},"lol")
 end)
 sv.gx = 1
 sv.gy = 7
