@@ -43,6 +43,7 @@ struct VAction{
 	fpstime time_to_take;
     sol::function action;
 };
+
 struct VSequence{
     std::string name;
     int count;
@@ -241,7 +242,6 @@ void lua_init()
 	lua.open_libraries(sol::lib::os);
 	lua["root"] = root;
 	lua.require_file("json",root + "scripts/json.lua");
-	lua.script_file(root + "scripts/_loader.lua");
 	
 	lua["S_W"] = S_WIDTH;
 	lua["S_H"] = S_HEIGHT;
@@ -496,6 +496,8 @@ void lua_init()
 		if(onFrame) onFrame = nullptr;
 		else onFrame = lua["onFrame"];
 	};
+
+	lua.script_file(root + "scripts/_loader.lua");
 };
 
 void script(){

@@ -42,7 +42,7 @@ struct MidiData{
 		s = bytes[0] & 0xF0; //strip status byte
 		n = bytes[1]; //note
 		v = bytes[2]; //vel
-		if(s==MidiBytes::off) {s=MidiBytes::on; v=0;}
+		if(s==MidiBytes::on and v==0) {s=MidiBytes::off;}
 	}
 	float range(float scaleMin, float scaleMax){
 		return scaleMin+((float(v)/127.0)*(scaleMax-scaleMin));

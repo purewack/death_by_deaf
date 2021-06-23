@@ -9,6 +9,7 @@ key_ok = 21
 key_less = 22
 key_more = 23
 
+print("root: "..root)
 loadfile(root .. "scripts/midi.lua")()
 
 onUIReload = function () 
