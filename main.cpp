@@ -181,6 +181,7 @@ struct VButton : public VElement {
 	bool state = false;
 	bool selected = false;
 	std::function<void(void)> onPress = nullptr;
+	std::function<void(void)> onRelease = nullptr;
 	
 	void draw() override {	
 		float xx = x - w*a_x;
@@ -233,7 +234,7 @@ struct VTimer : public VElement {
 
 void lua_init()
 {
-	
+
 	lua.open_libraries(sol::lib::base);
 	lua.open_libraries(sol::lib::table);
 	lua.open_libraries(sol::lib::string);
@@ -284,6 +285,7 @@ void lua_init()
 	auto btn = lua.new_usertype<VButton>("VButton",sol::base_classes, sol::bases<VElement>());
 	btn["selected"] = &VButton::selected;
 	btn["action"] = sol::property([](VButton* b, std::function<void(void)> f){b->onPress = f;});
+	btn["release"] = sol::property([](VButton* b, std::function<void(void)> f){b->onRelease = f;});
 	btn["state"] = sol::property([](VButton* b, bool s){ b->state = s; if(b->onPress and s) b->onPress(); });
 	
 	auto ubtn = lua.new_usertype<VUnitButton>("VUnitButton",sol::base_classes, sol::bases<VButton,VElement>());
@@ -799,10 +801,15 @@ void pollCtrl()
 			float yy = b->y - b->h*b->a_y;
 			auto r = Rectangle{xx,yy,b->w,b->h};
 			if(CheckCollisionPointRec(m,r)){				
-                if((not b->state and bb and not bo) or (b->state and not bb and bo)){
-					b->state = bb;
+                if(not b->state and bb and not bo)
+                {
+				    b->state = bb;
                     if(b->onPress) b->onPress();
-				}                 
+				}
+                else if(b->state and not bb and bo){
+				    b->state = bb;
+                    if(b->onRelease) b->onRelease();
+                }
 			}
 		}
 	}

@@ -3,7 +3,7 @@
         "device" : 0,
 		"event" : 144,
 		"event_key" : 1,
-		"event_action" : "print(\"system.shift(20)\")",
+		"event_action" : "print(\"system.shift(127)\")",
         "event_ending" : "print(\"system.shift(0)\")",
 	},
 	{   
