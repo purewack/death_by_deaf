@@ -1,3 +1,23 @@
+
+print("root: "..root)
+loadfile(root .. "scripts/midi.lua")()
+
+LoadFont(root .. "gfx/fixedsys.ttf")
+LoadFont(root .. "gfx/Consolas.ttf")
+LoadFont(root .. "gfx/AnonymousPro-Regular.ttf")
+LoadFont(root .. "gfx/DroidSerif.ttf")
+LoadFont(root .. "gfx/digital-7 (mono).ttf")
+LoadFont(root .. "gfx/Dotrice-Regular.otf")
+LoadFont(root .. "gfx/Lekton-Regular.ttf")
+UIFont(0)
+
+Actions(true)
+Bench(true)
+Chain(true)
+Midi(true)
+--Grid(true)
+--GridDiv(16)
+
 controls = {}
 local c_names = {}
 key_shift = 1
@@ -8,9 +28,6 @@ key_pad1 = 5
 key_ok = 21
 key_less = 22
 key_more = 23
-
-print("root: "..root)
-loadfile(root .. "scripts/midi.lua")()
 
 onUIReload = function () 
 	

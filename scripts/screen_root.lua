@@ -1,12 +1,3 @@
-onInit = function()
-	Actions(true)
-	Bench(true)
-	Chain(true)
-    Midi(true)
-	--Grid(true)
-	--GridDiv(16)
-	loadfile("../utils/midi.lua")
-end
 
 print(GridW())
 print(GridH())

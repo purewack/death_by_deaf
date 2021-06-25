@@ -243,7 +243,14 @@ void lua_init()
 	lua.open_libraries(sol::lib::os);
 	lua["root"] = root;
 	lua.require_file("json",root + "scripts/json.lua");
-	
+	lua["LoadFont"] = [](std::string name){
+    	auto f = LoadFont((name).c_str());
+        fonts.push_back(f);
+	};
+    lua["UIFont"] = [](int i){
+        if(i >= 0 and i < fonts.size()) ui_font = fonts[i];
+    };
+    
 	lua["S_W"] = S_WIDTH;
 	lua["S_H"] = S_HEIGHT;
 	lua["S_HT"] = S_HEIGHT_T;
@@ -267,7 +274,7 @@ void lua_init()
 	auto lbl = lua.new_usertype<VLabel>("VLabel",sol::base_classes, sol::bases<VElement>());
 	lbl["text"] = &VLabel::text;
 	lbl["size"] = &VLabel::size;
-	lbl["font_idx"] = &VLabel::font;
+	lbl["font"] = &VLabel::font;
 	
 	lua.new_usertype<Texture2D>("VTex");
 	auto image = lua.new_usertype<VImage>("VImage",sol::base_classes, sol::bases<VElement>());
@@ -874,34 +881,16 @@ void checkEvent(MidiData* m)
 	
 void init()
 {
+	current_script = "scripts/screen_root.lua";
+	chain.push_back(current_script);
+	
 	InitWindow(S_WIDTH,S_HEIGHT_T,"scripter");
 	SetTargetFPS(30);
-	auto fixedsys = LoadFont((root + "gfx/fixedsys.ttf").c_str());
-	auto consolas = LoadFont((root + "gfx/Consolas.ttf").c_str());
-	auto lekton = LoadFont((root + "gfx/Lekton-Regular.ttf").c_str());
-	auto droid = LoadFont((root + "gfx/DroidSerif.ttf").c_str());
-	auto anony = LoadFont((root + "gfx/AnonymousPro-Regular.ttf").c_str());
-	auto digital = LoadFont((root + "gfx/digital-7(mono).ttf").c_str());
-	fonts.push_back(fixedsys);
-	fonts.push_back(consolas);
-	fonts.push_back(lekton);
-	fonts.push_back(droid);
-	fonts.push_back(anony);
-	fonts.push_back(digital);
 	commands.push_back("");
 	command = "";
 	
 	lua_init();
 	script();
-	
-	try{
-		lua["onInit"]();
-	}
-	catch(std::exception ex){
-		script_error = true;
-		LOG("onLoad error");
-	}
-	
 }
 
 int main(int argc, char* argv[]) 
@@ -909,9 +898,6 @@ int main(int argc, char* argv[])
 	
 	makeRoot(argv[0]);
 		
-	current_script = "scripts/screen_root.lua";
-	chain.push_back(current_script);
-	
 	init();
     tests();
 	static std::atomic_bool running = true;
