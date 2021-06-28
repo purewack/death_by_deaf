@@ -78,6 +78,7 @@ lbl = AddVLabel("hello");
 lbl.font = 1
 lbl.size = 40
 
+
 t = 0
 onFrame = function ()
 local x = 320 + (200 * math.sin(t) );
@@ -87,3 +88,4 @@ local x = 320 + (200 * math.sin(t) );
  	t = t + 0.02;
 end
 
+navigables = {lbl,sv,nx}

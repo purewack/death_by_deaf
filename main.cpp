@@ -70,7 +70,6 @@ struct VElement{
 	bool bound_box = false;
 	bool visible = true;
     bool focus = false;
-    bool navigable = false;
 	
 	VElement(){};
 	virtual ~VElement(){};
@@ -259,34 +258,33 @@ void lua_init()
     };
     
     auto l_system = lua["system"].get_or_create<sol::table>();
-    l_system["navigateNext"] = [=](){
-        //for( int i=0; i<elements.size(); i++){
-//             if(elements[i]->focus){
-//                 int j = i+1;
-//                 if(j==elements.size()-1) j=0;
-//                 if(not elements[j].navigable) continue;
-//                 elements[i]->focus = false;
-//                 elements[j]->focus = true;
-//                 return;
-//             }
-//         }
-//         if(elements.size()){
-//             for(auto e : elements){
-//                 if(auto m = dynamic_cast<VUnitButton*>(e)) continue;
-//                 else{
-//                     e->focus = true;
-//                     break;
-//                 }
-//             }
-//         }
+    l_system["navigate"] = [=](){
+        sol::table navigables = lua["navigables"];
+        int focal = 0;
+        int count = 0;
+        for (const auto& key_value_pair : navigables ) {
+             sol::object key = key_value_pair.first;
+             sol::object value = key_value_pair.second;
+             
+             auto e = value.as<VElement*>();
+             if(e->focus) focal = key.as<int>();
+             e->focus = false;
+             count += 1;
+        }
         
+        focal += 1;
+        if(focal > count) focal = 1;
         
-        // for(auto e : elements){
-//             e->focus = false;
-//         }
-//         auto t = lua["navigable"];
-//         if(t)
-//
+        for (const auto& key_value_pair : navigables ) {
+             sol::object key = key_value_pair.first;
+             sol::object value = key_value_pair.second;
+             
+             auto e = value.as<VElement*>();
+             if(key.as<int>() == focal) {
+                 e->focus = true;
+                 break;
+             }
+        }
     };
     
 	lua["S_W"] = S_WIDTH;
@@ -308,7 +306,6 @@ void lua_init()
 	elem["a"] = sol::property([](VElement* v){return v->col.a;}, [](VElement* v, float a){v->col.a = a;});
 	elem["hue"] = sol::property([](VElement* v, float h){v->col = hueToHSV(h);});
 	elem["tag"] = &VElement::tag;
-    elem["navigable"] = &VElement::navigable;
 	elem["focus"] = sol::property([](VElement* v, bool a){
     	for(auto e : elements){
     		e->focus = false;
