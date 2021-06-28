@@ -63,12 +63,14 @@ struct VElement{
 	float h = 16;
 	float a_x = 0.5f; //anchor points
 	float a_y = 0.5f;
-	
+        
 	std::string tag = "default";
 	Color col = WHITE;
 	
 	bool bound_box = false;
 	bool visible = true;
+    bool focus = false;
+    bool navigable = false;
 	
 	VElement(){};
 	virtual ~VElement(){};
@@ -78,7 +80,8 @@ struct VElement{
 		float yy = y - h*a_y;
 		bool hover = (CheckCollisionPointRec(GetMousePosition(),{xx,yy,w,h}));
 		if(hover and IsMouseButtonPressed(0) and IS_SHIFT_DOWN and not in_console) bound_box = not bound_box;
-		
+		hover |= focus;
+        
 		if(hover and IS_SHIFT_DOWN) 
 		{
 			DrawString(tag,x-1,y-1,16,BLACK);
@@ -95,8 +98,10 @@ struct VElement{
 			pos += ",";
 			pos += std::to_string(y);
 			DrawString(pos,x,y);
-			
 		}
+        if(focus){
+            DrawRectangle(xx,yy,w,h,{0,255,255,128});
+        }
 	}
 	
 	void update(){
@@ -232,6 +237,8 @@ struct VTimer : public VElement {
 	}
 };
 
+
+
 void lua_init()
 {
 
@@ -249,6 +256,37 @@ void lua_init()
 	};
     lua["UIFont"] = [](int i){
         if(i >= 0 and i < fonts.size()) ui_font = fonts[i];
+    };
+    
+    auto l_system = lua["system"].get_or_create<sol::table>();
+    l_system["navigateNext"] = [=](){
+        //for( int i=0; i<elements.size(); i++){
+//             if(elements[i]->focus){
+//                 int j = i+1;
+//                 if(j==elements.size()-1) j=0;
+//                 if(not elements[j].navigable) continue;
+//                 elements[i]->focus = false;
+//                 elements[j]->focus = true;
+//                 return;
+//             }
+//         }
+//         if(elements.size()){
+//             for(auto e : elements){
+//                 if(auto m = dynamic_cast<VUnitButton*>(e)) continue;
+//                 else{
+//                     e->focus = true;
+//                     break;
+//                 }
+//             }
+//         }
+        
+        
+        // for(auto e : elements){
+//             e->focus = false;
+//         }
+//         auto t = lua["navigable"];
+//         if(t)
+//
     };
     
 	lua["S_W"] = S_WIDTH;
@@ -270,6 +308,13 @@ void lua_init()
 	elem["a"] = sol::property([](VElement* v){return v->col.a;}, [](VElement* v, float a){v->col.a = a;});
 	elem["hue"] = sol::property([](VElement* v, float h){v->col = hueToHSV(h);});
 	elem["tag"] = &VElement::tag;
+    elem["navigable"] = &VElement::navigable;
+	elem["focus"] = sol::property([](VElement* v, bool a){
+    	for(auto e : elements){
+    		e->focus = false;
+    	} 
+        v->focus = a;
+    });
 	
 	auto lbl = lua.new_usertype<VLabel>("VLabel",sol::base_classes, sol::bases<VElement>());
 	lbl["text"] = &VLabel::text;
@@ -306,7 +351,7 @@ void lua_init()
 	};
 	
 	lua["RemoveVElement"] = [](VElement* l){
-		elements.erase(std::remove_if(
+        elements.erase(std::remove_if(
 			elements.begin(), 
             elements.end(),
             [=](auto a){
@@ -352,14 +397,6 @@ void lua_init()
 		return l;
 	};
 	
-	lua["OffsetVElement"] = [](VElement* v, float x, float y){
-		if(v == nullptr) {
-			ERROR("offsetting invalid object");
-			return;
-		}
-		v->x += x;
-		v->y += y;
-	};
 
 	lua["PlaceVElement"] = [](VElement* v, float x, float y){
 		if(v == nullptr) {
@@ -378,7 +415,6 @@ void lua_init()
 		
 		v->bound_box = not v->bound_box;
 	};
-	
 	 
     lua["CancelVSequence"] = [](std::string withName){
         actions.erase(std::remove_if(
@@ -394,8 +430,14 @@ void lua_init()
             );
     };
 	
-	lua["AddVAction"] = [](sol::table ac,sol::optional<std::string> name){
+	auto addVAction = [](sol::table ac,sol::optional<std::string> name){
 		
+        /*
+        VAction table:
+        ["action"]
+        ["duration"]
+        */
+        
         /*
         AddVAction({
             duration = 1000, <- ms
@@ -404,7 +446,6 @@ void lua_init()
             end
         },"action key")
         */
-        
 		auto a = new VAction();
         a->time_to_take = std::chrono::duration_cast<fpstime>(std::chrono::milliseconds{ac["duration"]});
 		a->action = ac["action"];
@@ -417,9 +458,10 @@ void lua_init()
         
         if(name == sol::nullopt) s->name = "default";
         else s->name = name.value();
-        
+        LOG("new action: " + s->name);
 		actions.push_back(s);
 	};
+    lua["AddVAction"] = addVAction;
     
     lua["AddVSequence"]= [](sol::table ac,sol::optional<std::string> name){
         /*
@@ -433,7 +475,7 @@ void lua_init()
             },
             {
                 duration = 2000, <- ms
-                action = function()
+                action = function()  
                     print("next action")
                 end
             }
@@ -461,6 +503,35 @@ void lua_init()
 		actions.push_back(s);
     };
 	
+	lua["MoveVElement"] = [=](VElement* v, float x, float y, int in_time){
+		if(v == nullptr) {
+			ERROR("moving invalid object");
+			return;
+		}
+        
+        float tt = float(in_time*2);
+        float sx = v->x;
+        float sy = v->y;
+        float dx = x-sx;
+        float dy = y-sy;
+        
+        sol::table ac = lua.create_table_with("duration",in_time,"action",
+            [=](float dt){
+                v->x = sx + std::pow(std::sin(3.1415f * dt/tt),2)*dx;
+                v->y = sy + std::pow(std::sin(3.1415f * dt/tt),2)*dy;
+            }
+        );
+		addVAction(ac,sol::optional<std::string>("move_smooth"));
+	};
+	lua["OffsetVElement"] = [](VElement* v, float x, float y){
+		if(v == nullptr) {
+			ERROR("offsetting invalid object");
+			return;
+		}
+		v->x += x;
+		v->y += y;
+	};
+    
 	lua["Message"] = [](std::string msg){
 		message_text = msg;
 		message_timer = std::chrono::duration_cast<fpstime>(std::chrono::seconds{2});

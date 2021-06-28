@@ -1,4 +1,15 @@
 
+controls = {}
+local c_names = {}
+key_shift = 1
+key_stop = 2
+key_rec = 3
+key_play = 4
+key_pad1 = 5
+key_ok = 21
+key_less = 22
+key_more = 23
+
 print("root: "..root)
 loadfile(root .. "scripts/midi.lua")()
 
@@ -18,16 +29,6 @@ Midi(true)
 --Grid(true)
 --GridDiv(16)
 
-controls = {}
-local c_names = {}
-key_shift = 1
-key_stop = 2
-key_rec = 3
-key_play = 4
-key_pad1 = 5
-key_ok = 21
-key_less = 22
-key_more = 23
 
 onUIReload = function () 
 	

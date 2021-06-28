@@ -58,9 +58,7 @@ sv = AddVButton(function()
     second = {
         duration = 3000,
         action = function (dt)
-            if dt == 0 then
-                print("second")
-            end
+            print("second " .. dt)
         end
     }
     --CancelVAction("lol")
@@ -77,7 +75,7 @@ nx.gx = 2
 nx.gy = 7
 
 lbl = AddVLabel("hello");
-lbl.font_idx = 1
+lbl.font = 1
 lbl.size = 40
 
 t = 0
@@ -88,3 +86,4 @@ local x = 320 + (200 * math.sin(t) );
  	lbl.y = y;
  	t = t + 0.02;
 end
+

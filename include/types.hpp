@@ -158,8 +158,8 @@ int cmd_index = 0;
 
 #define LOG(X) std::cout << "[Info] " << X << std::endl; 
 #define ERROR(X) std::cout << "[**Error**] " << X << std::endl;
-
-#define IS_SHIFT_DOWN IsKeyDown(KEY_LEFT_SHIFT)
+bool sys_shift = false;
+#define IS_SHIFT_DOWN IsKeyDown(KEY_LEFT_SHIFT) or sys_shift
 
 Color hueToHSV(int hue){
 	hue &= 127;
