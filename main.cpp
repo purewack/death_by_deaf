@@ -166,14 +166,14 @@ struct VLabel : public VElement{
 	void draw() override {
 		if(w == 0 or h == 0) return;
 		if(text.size() == 0) return;
-		
-		w = MeasureText(text.c_str(),size);
-		h = size;
-		
-		float xx = x - w*a_x;
-		float yy = y - h*a_y;
 		if(font < 0 )font = 0;
 		if(font >= fonts.size()) font = fonts.size()-1;
+		
+        auto ss = MeasureTextEx(fonts[font],text.c_str(),size,0.f);
+		w = ss.x;
+        h = ss.y;
+		float xx = x - w*a_x;
+		float yy = y - h*a_y;
 		DrawTextEx(fonts[font], text.c_str(), {xx,yy}, size, 0 , WHITE);
 	};
 };
@@ -257,9 +257,12 @@ void lua_init()
         if(i >= 0 and i < fonts.size()) ui_font = fonts[i];
     };
     
+    
     auto l_system = lua["system"].get_or_create<sol::table>();
     l_system["navigate"] = [=](){
         sol::table navigables = lua["navigables"];
+        if(navigables == sol::nil) return;
+        
         int focal = 0;
         int count = 0;
         for (const auto& key_value_pair : navigables ) {
@@ -272,8 +275,12 @@ void lua_init()
              count += 1;
         }
         
-        focal += 1;
+        bool prev = false;
+        focal += (prev ? -1 : 1);
         if(focal > count) focal = 1;
+        if(focal < 1) focal = count;
+
+        lua["focus_idx"] = focal;
         
         for (const auto& key_value_pair : navigables ) {
              sol::object key = key_value_pair.first;
@@ -286,6 +293,7 @@ void lua_init()
              }
         }
     };
+    
     
 	lua["S_W"] = S_WIDTH;
 	lua["S_H"] = S_HEIGHT;
@@ -307,10 +315,13 @@ void lua_init()
 	elem["hue"] = sol::property([](VElement* v, float h){v->col = hueToHSV(h);});
 	elem["tag"] = &VElement::tag;
 	elem["focus"] = sol::property([](VElement* v, bool a){
-    	for(auto e : elements){
+    	int i=1;
+        for(auto e : elements){
     		e->focus = false;
+            if(e == v) lua["focus_idx"] = i;
+            i++;
     	} 
-        v->focus = a;
+        v->focus = true;
     });
 	
 	auto lbl = lua.new_usertype<VLabel>("VLabel",sol::base_classes, sol::bases<VElement>());
@@ -336,7 +347,9 @@ void lua_init()
 	btn["action"] = sol::property([](VButton* b, std::function<void(void)> f){b->onPress = f;});
 	btn["release"] = sol::property([](VButton* b, std::function<void(void)> f){b->onRelease = f;});
 	btn["state"] = sol::property([](VButton* b, bool s){ b->state = s; if(b->onPress and s) b->onPress(); });
-	
+	btn["onPress"] = [](VButton* b){b->onPress();};
+	btn["onRelease"] = [](VButton* b){b->onRelease();};
+    
 	auto ubtn = lua.new_usertype<VUnitButton>("VUnitButton",sol::base_classes, sol::bases<VButton,VElement>());
 	ubtn["note"] = &VUnitButton::note;
     ubtn["type"] = &VUnitButton::type;
@@ -578,6 +591,7 @@ void lua_init()
 };
 
 void script(){
+    lua["navigables"] = nullptr;
 	onFrame = nullptr;
 	onUIFrame = nullptr;
 	for(auto e : elements) delete e;

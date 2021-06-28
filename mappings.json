@@ -17,5 +17,11 @@
 		"event" : 144,
 		"event_key" : 3,
 		"event_action" : "print(\"transport.rec()\")"
+	},
+    {   
+        "device" : 0,
+		"event" : 144,
+		"event_key" : 5,
+		"event_action" : "system.navigate()"
 	}
 ]
