@@ -1,9 +1,4 @@
-
-print(GridW())
-print(GridH())
-
-
-tex1 = CreateTexture("test_tex.png")
+tex1 = CreateTexture("gfx/test_tex.png")
 img = AddVImage();
 img.x = 300
 img.y = 200
@@ -12,7 +7,7 @@ img.w = 100
 img.h = 100
 
 
-tiles = CreateTexture("test_tiles.png")
+tiles = CreateTexture("gfx/test_tiles.png")
 img2 = AddVImage();
 img2.x = 400
 img2.y = 200

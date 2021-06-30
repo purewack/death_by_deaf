@@ -591,7 +591,6 @@ void lua_init()
 };
 
 void script(){
-    lua["navigables"] = nullptr;
 	onFrame = nullptr;
 	onUIFrame = nullptr;
 	for(auto e : elements) delete e;
@@ -602,6 +601,7 @@ void script(){
 		UnloadTexture(t);
 	}
 	textures_in_script.clear();
+    lua["navigables"] = nullptr;
 	
 	//load screen script
 	try{
@@ -609,9 +609,9 @@ void script(){
 		auto result = sc();
 		script_error = not result.valid();
 		if (result.valid()) {
+			lua["onUIReload"]();			
+            onUIFrame = lua["onUIFrame"];
 			onFrame = lua["onFrame"];
-			lua["onUIReload"]();
-			onUIFrame = lua["onUIFrame"];
 			LOG("script success");
 		}
 		else {
@@ -859,6 +859,7 @@ void screen()
 
 void pollCtrl()
 {
+    std::lock_guard<std::mutex> lg(mtx_fps);
 	Vector2 m = GetMousePosition();
 	bool bb = IsMouseButtonDown(0);
 	static bool bo;
@@ -946,6 +947,7 @@ void pollMidi()
                     m.w = d;
 					m.parse(bytes);
 					//LOG(m.print());
+                    std::lock_guard<std::mutex> lg(mtx_fps);
 					checkEvent(&m);
 				}
 			}
@@ -955,7 +957,6 @@ void pollMidi()
 
 void checkEvent(MidiData* m)
 {
-	std::lock_guard<std::mutex> lg(mtx_fps);
 	lua["checkMidi"](m->w,m->s,m->n,m->v);
     mevents.insert(mevents.begin(),m->print());
     if(mevents.size() > 5) mevents.pop_back();

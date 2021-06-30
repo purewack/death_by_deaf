@@ -4,7 +4,7 @@ title.y = 240
 
 t = 0
 onFrame = function()
-	local x = 320 + (50 * math.sin(t) );
+    local x = 320 + (50 * math.sin(t) );
     title.x = x
     t = t +0.06
 end
