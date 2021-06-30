@@ -1,11 +1,30 @@
-
 controls = {}
-local c_names = {}
+control_names = {}
 key_shift = 1
 key_stop = 2
 key_rec = 3
 key_play = 4
+
 key_pad1 = 5
+key_pad2 = 6
+key_pad3 = 7
+key_pad4 = 8
+
+key_pad5 = 9
+key_pad6 = 10
+key_pad7 = 11
+key_pad8 = 12
+
+key_pad9 = 13
+key_pad10 = 14
+key_pad11 = 15
+key_pad12 = 16
+
+key_pad13 = 17
+key_pad14 = 18
+key_pad15 = 19
+key_pad16 = 20
+
 key_ok = 21
 key_less = 22
 key_more = 23
@@ -32,18 +51,18 @@ Midi(true)
 
 onUIReload = function () 
 	
-	c_names[key_shift] = "key_shift"
-	c_names[key_stop] = "key_stop"
-	c_names[key_rec] = "key_rec"
-	c_names[key_play] = "key_play"
+	control_names[key_shift] = "key_shift"
+	control_names[key_stop] = "key_stop"
+	control_names[key_rec] = "key_rec"
+	control_names[key_play] = "key_play"
 
 	for p=1,16 do
-	c_names[key_pad1+p-1] = "key_pad_" .. p
+	control_names[key_pad1+p-1] = "key_pad_" .. p
 	end
 	
-	c_names[key_less] = "key_less"
-	c_names[key_more] = "key_more"
-	c_names[key_ok] = "key_ok"
+	control_names[key_less] = "key_less"
+	control_names[key_more] = "key_more"
+	control_names[key_ok] = "key_ok"
 
 	for c=1,4 do
 		controls[c] = AddVUnitButton(c) 
@@ -91,7 +110,7 @@ onUIReload = function ()
 	end
 	
 	for c=1,23 do
-		controls[c].tag = c_names[c]
+		controls[c].tag = control_names[c]
 	end	
 
 end

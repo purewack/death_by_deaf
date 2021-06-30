@@ -22,3 +22,7 @@ nxt.w = 40
 nxt.h = 40
 nxt.x = 600
 nxt.y = 400
+
+unitmap[ev_note_on][key_pad2] = function()
+   print("post added event screen 2") 
+end

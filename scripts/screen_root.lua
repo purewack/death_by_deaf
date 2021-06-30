@@ -84,3 +84,7 @@ local x = 320 + (200 * math.sin(t) );
 end
 
 navigables = {lbl,sv,nx}
+
+unitmap[ev_note_on][key_pad2] = function()
+   print("post added event") 
+end
