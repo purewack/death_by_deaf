@@ -101,6 +101,8 @@ bool sys_shift = false;
 #define IS_SHIFT_DOWN IsKeyDown(KEY_LEFT_SHIFT) or sys_shift
 
 Color hueToHSV(int hue){
+    if(hue == 0) return BLACK;
+
 	hue &= 127;
 	static const int uHueRed = 18;
 	static const int uHueOra = 26;

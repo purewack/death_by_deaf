@@ -202,6 +202,8 @@ struct VUnitButton : public VButton {
 	virtual ~VUnitButton(){};
     int note = 0;
     int type = MidiBytes::on;
+    int v_hue = 0;
+    int v_hue_old = 0;
 };
 
 struct VTimer : public VElement {
@@ -484,6 +486,7 @@ void lua_init()
 	auto ubtn = lua.new_usertype<VUnitButton>("VUnitButton",sol::base_classes, sol::bases<VButton,VElement>());
 	ubtn["note"] = &VUnitButton::note;
     ubtn["type"] = &VUnitButton::type;
+    ubtn["v_hue"] = &VUnitButton::v_hue;
     
     
 	l_visuals["createTexture"] = [](std::string t) -> Texture2D {
@@ -675,7 +678,10 @@ void lua_init()
 		message_text = msg;
 		message_timer = std::chrono::duration_cast<fpstime>(std::chrono::seconds{2});
 	};
-	
+	l_visuals["setHue"] = [=](int i, int hue){
+	    lua["control"]["units"][i]["v_hue"] = hue;
+	};
+    
 	lua["Present"] = [](std::string scr){
 		current_script = scr;
 		chain.push_back(scr);
@@ -979,6 +985,12 @@ void pollCtrl()
                     lua["control"]["checkEvent"](0,b->type,b->note,vel);
                 }
 			}
+            
+            if(b->v_hue != b->v_hue_old){
+                b->v_hue_old = b->v_hue; 
+                //send midi to physical hue controller here
+                b->col = hueToHSV(b->v_hue);
+            }
 		}
         else if(VButton* b = dynamic_cast<VButton*>(e))
 		{	
