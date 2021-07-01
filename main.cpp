@@ -242,98 +242,65 @@ void lua_init()
 {
     std::function<void(sol::table ac,sol::optional<std::string> name)> addVAction;
     std::function<void(sol::table ac,sol::optional<std::string> name)> addVSequence;
+    std::function<void(std::string name)> cancelVSequence;
+    
 	lua.open_libraries(sol::lib::base);
 	lua.open_libraries(sol::lib::table);
 	lua.open_libraries(sol::lib::string);
 	lua.open_libraries(sol::lib::io);
 	lua.open_libraries(sol::lib::math);
 	lua.open_libraries(sol::lib::os);
+	lua["S_W"] = S_WIDTH;
+	lua["S_H"] = S_HEIGHT;
+	lua["S_HT"] = S_HEIGHT_T;
 	lua["root"] = root;
 	lua.require_file("json",root + "scripts/json.lua");
-	lua["LoadFont"] = [](std::string name){
+	
+    
+    auto l_system = lua["system"].get_or_create<sol::table>();
+    auto l_visuals = lua["visuals"].get_or_create<sol::table>();
+    auto l_control = lua["control"].get_or_create<sol::table>();
+    auto l_audio = lua["audio"].get_or_create<sol::table>();
+    
+	l_system["loadFont"] = [](std::string name){
     	auto f = LoadFont((root + name).c_str());
         fonts.push_back(f);
 	};
-    lua["UIFont"] = [](int i){
+    l_system["uiFont"] = [](int i){
         if(i >= 0 and i < fonts.size()) ui_font = fonts[i];
     };
-	lua["GridDiv"] = [](int d){
+	l_system["gridDiv"] = [](int d){
 		g_div = d;
 	};
-	lua["GridW"] = []() -> int{
+	l_system["gridW"] = []() -> int{
 		return (S_WIDTH)/g_div;
 	};
-	lua["GridH"] = []() -> int{
+	l_system["gridH"] = []() -> int{
 		return (S_HEIGHT)/g_div;
 	};
-	lua["Grid"] = [](bool state){
+	l_system["grid"] = [](bool state){
 		layout_grid = state;
 	};
-	lua["Actions"] = [](bool state){
+	l_system["actions"] = [](bool state){
 		actions_view = state;
 	};
-	lua["Bench"] = [](bool state){
+	l_system["bench"] = [](bool state){
 		bench_view = state;
 	};
-	lua["Chain"] = [](bool state){
+	l_system["chain"] = [](bool state){
 		chain_view = state;
 	};
-	lua["Midi"] = [](bool state){
+	l_system["midi"] = [](bool state){
 		midi_view = state;
 	};
-	lua["ToggleAnimation"] = [](){
+	l_system["toggleAnimation"] = [](){
 		if(onFrame) onFrame = nullptr;
 		else onFrame = lua["onFrame"];
 	};
-    
-    
-    
-    auto l_system = lua["system"].get_or_create<sol::table>();
     l_system["push_command"] = [](std::string cmd){
         commands.push_back(cmd);
     };
-    l_system["shift"] = (unsigned int)0;
-    l_system["navigate"] = [=](){
-        sol::table navigables = lua["navigables"];
-        if(navigables == sol::nil) return;
-        
-        int focal = 0;
-        int count = 0;
-        for (const auto& key_value_pair : navigables ) {
-             sol::object key = key_value_pair.first;
-             sol::object value = key_value_pair.second;
-             
-             auto e = value.as<VElement*>();
-             if(e->focus) focal = key.as<int>();
-             e->focus = false;
-             count += 1;
-        }
-        
-        bool prev = false;
-        focal += (prev ? -1 : 1);
-        if(focal > count) focal = 1;
-        if(focal < 1) focal = count;
-
-        lua["focus_idx"] = focal;
-        
-        for (const auto& key_value_pair : navigables ) {
-             sol::object key = key_value_pair.first;
-             sol::object value = key_value_pair.second;
-             
-             auto e = value.as<VElement*>();
-             if(key.as<int>() == focal) {
-                 e->focus = true;
-                 break;
-             }
-        }
-    };
-    
-    l_system["load"] = [](std::string path){
-    
-    };
-    
     l_system["async_after"] = [=](sol::function action, int after_ms, std::string withName){  
-
 		auto w = new VAction();
         w->time_to_take = std::chrono::duration_cast<fpstime>(std::chrono::milliseconds{after_ms});
 		
@@ -351,11 +318,65 @@ void lua_init()
                   
         actions.push_back(s);
     };
+    l_system["async_cancel"] = [=](std::string withName){
+        l_visuals["cancelVSequence"](withName);
+    };
     
+    l_system["load_sesh"] = [](std::string path){
     
-	lua["S_W"] = S_WIDTH;
-	lua["S_H"] = S_HEIGHT;
-	lua["S_HT"] = S_HEIGHT_T;
+    };
+
+    l_control["shift"] = 0;
+    l_control["ev_vel"] = 0;
+    l_control["ev_note_on"] = 0x90;
+    l_control["ev_note_off"] = 0x80;
+    l_control["ev_note_cc"] = 0xA0;
+    l_control["map"].get_or_create<sol::table>();
+    l_control["map"][0x90].get_or_create<sol::table>();
+    l_control["map"][0x80].get_or_create<sol::table>();
+    l_control["map"][0xA0].get_or_create<sol::table>();
+    l_control["unitmap"].get_or_create<sol::table>();
+    l_control["unitmap"][0x90].get_or_create<sol::table>();
+    l_control["unitmap"][0x80].get_or_create<sol::table>();
+    l_control["unitmap"][0xA0].get_or_create<sol::table>();
+    l_control["units"].get_or_create<sol::table>();
+    l_control["focus_idx"] = 0;
+    l_control["navigables"].get_or_create<sol::table>();
+    l_control["navigate"] = [=](){
+        sol::table navigables = l_control["navigables"];
+        if(navigables == sol::nil) return;
+        
+        unsigned int focal = 0;
+        unsigned int count = 0;
+        for (const auto& key_value_pair : navigables ) {
+             sol::object key = key_value_pair.first;
+             sol::object value = key_value_pair.second;
+             
+             auto e = value.as<VElement*>();
+             if(e->focus) focal = key.as<int>();
+             e->focus = false;
+             count += 1;
+        }
+        
+        bool prev = false;
+        focal += (prev ? -1 : 1);
+        if(focal > count) focal = 1;
+        if(focal < 1) focal = count;
+
+        //l_control["focus_idx"] = focal;
+        
+        for (const auto& key_value_pair : navigables ) {
+             sol::object key = key_value_pair.first;
+             sol::object value = key_value_pair.second;
+             
+             auto e = value.as<VElement*>();
+             if(key.as<int>() == focal) {
+                 e->focus = true;
+                 break;
+             }
+        }
+    };
+    
 	
 	auto elem = lua.new_usertype<VElement>("VElement");
 	elem["x"] = &VElement::x;
@@ -412,13 +433,14 @@ void lua_init()
 	ubtn["note"] = &VUnitButton::note;
     ubtn["type"] = &VUnitButton::type;
     
-	lua["CreateTexture"] = [](std::string t) -> Texture2D {
+    
+	l_visuals["createTexture"] = [](std::string t) -> Texture2D {
 		auto tex = LoadTexture((root+t).c_str());
 		textures_in_script.push_back(tex);
 		return tex;
 	};
 	
-	lua["RemoveVElement"] = [](VElement* l){
+	l_visuals["removeVElement"] = [](VElement* l){
         elements.erase(std::remove_if(
 			elements.begin(), 
             elements.end(),
@@ -431,42 +453,42 @@ void lua_init()
             elements.end()
         );
 	};
-	lua["AddVElement"] = []() -> VElement* { 
+	l_visuals["addVElement"] = []() -> VElement* { 
 		auto l = new VElement();
 		elements.push_back(l);
 		return l;
 	};
-	lua["AddVButton"] = [](sol::function f) -> VButton* { 
+	l_visuals["addVButton"] = [](sol::function f) -> VButton* { 
 		auto l = new VButton();
 		l->onPress = f;
 		elements.push_back(l);
 		return l;
 	};
-    lua["AddVUnitButton"] = [](int note) -> VUnitButton* { 
+    l_visuals["addVUnitButton"] = [](int note) -> VUnitButton* { 
 		auto l = new VUnitButton();
 		l->note = note;
 		elements.push_back(l);
 		return l;
 	};
-	lua["AddVLabel"] = [](std::string s) -> VLabel* { 
+	l_visuals["addVLabel"] = [](std::string s) -> VLabel* { 
 		auto l = new VLabel();
 		l->text = s;
 		elements.push_back(l);
 		return l;
 	};
-	lua["AddVImage"] = []() -> VImage* { 
+	l_visuals["addVImage"] = []() -> VImage* { 
 		auto l = new VImage();
 		elements.push_back(l);
 		return l;
 	};
-	lua["AddVTimer"] = []() -> VTimer* { 
+	l_visuals["addVTimer"] = []() -> VTimer* { 
 		auto l = new VTimer();
 		elements.push_back(l);
 		return l;
 	};
 	
 
-	lua["PlaceVElement"] = [](VElement* v, float x, float y){
+	l_visuals["placeVElement"] = [](VElement* v, float x, float y){
 		if(v == nullptr) {
 			ERROR("placing invalid object");
 			return;
@@ -475,7 +497,7 @@ void lua_init()
 		v->y = y;
 	};
 	
-	lua["DebugVElement"] = [](VElement* v){
+	l_visuals["debugVElement"] = [](VElement* v){
 		if(v == nullptr) {
 			ERROR("invalid object");
 			return;
@@ -483,8 +505,37 @@ void lua_init()
 		
 		v->bound_box = not v->bound_box;
 	};
-	 
-    lua["CancelVSequence"] = [](std::string withName){
+	 	
+	l_visuals["moveVElement"] = [=](VElement* v, float x, float y, int in_time){
+		if(v == nullptr) {
+			ERROR("moving invalid object");
+			return;
+		}
+        
+        float tt = float(in_time*2);
+        float sx = v->x;
+        float sy = v->y;
+        float dx = x-sx;
+        float dy = y-sy;
+        
+        sol::table ac = lua.create_table_with("duration",in_time,"action",
+            [=](float dt){
+                v->x = sx + std::pow(std::sin(3.1415f * dt/tt),2)*dx;
+                v->y = sy + std::pow(std::sin(3.1415f * dt/tt),2)*dy;
+            }
+        );
+		addVAction(ac,sol::optional<std::string>("move_smooth"));
+	};
+	l_visuals["offsetVElement"] = [](VElement* v, float x, float y){
+		if(v == nullptr) {
+			ERROR("offsetting invalid object");
+			return;
+		}
+		v->x += x;
+		v->y += y;
+	};
+    
+    l_visuals["cancelVSequence"] = cancelVSequence = [](std::string withName){
         actions.erase(std::remove_if(
             actions.begin(),
                 actions.end(),
@@ -498,7 +549,7 @@ void lua_init()
             );
     };
 	
-	addVAction = [](sol::table ac,sol::optional<std::string> name){
+	l_visuals["addVAction"] = addVAction = [](sol::table ac,sol::optional<std::string> name){
 		
         /*
         VAction table:
@@ -529,7 +580,7 @@ void lua_init()
         LOG("new action: " + s->name);
 		actions.push_back(s);
 	};
-    addVSequence = [](sol::table ac,sol::optional<std::string> name){
+    l_visuals["addVSequence"] = addVSequence = [](sol::table ac,sol::optional<std::string> name){
         /*
         AddVSequnece(
         {
@@ -567,39 +618,8 @@ void lua_init()
         });
 		actions.push_back(s);
     };
-    lua["AddVAction"] = addVAction;
-    lua["AddVSequence"]= addVSequence;
-	
-	lua["MoveVElement"] = [=](VElement* v, float x, float y, int in_time){
-		if(v == nullptr) {
-			ERROR("moving invalid object");
-			return;
-		}
-        
-        float tt = float(in_time*2);
-        float sx = v->x;
-        float sy = v->y;
-        float dx = x-sx;
-        float dy = y-sy;
-        
-        sol::table ac = lua.create_table_with("duration",in_time,"action",
-            [=](float dt){
-                v->x = sx + std::pow(std::sin(3.1415f * dt/tt),2)*dx;
-                v->y = sy + std::pow(std::sin(3.1415f * dt/tt),2)*dy;
-            }
-        );
-		addVAction(ac,sol::optional<std::string>("move_smooth"));
-	};
-	lua["OffsetVElement"] = [](VElement* v, float x, float y){
-		if(v == nullptr) {
-			ERROR("offsetting invalid object");
-			return;
-		}
-		v->x += x;
-		v->y += y;
-	};
     
-	lua["Message"] = [](std::string msg){
+	l_visuals["message"] = [](std::string msg){
 		message_text = msg;
 		message_timer = std::chrono::duration_cast<fpstime>(std::chrono::seconds{2});
 	};
@@ -629,7 +649,7 @@ void script(){
 		UnloadTexture(t);
 	}
 	textures_in_script.clear();
-    lua["navigables"] = nullptr;
+    lua["control"]["navigables"] = nullptr;
 	
 	//load screen script
 	try{
@@ -637,9 +657,9 @@ void script(){
 		auto result = sc();
 		script_error = not result.valid();
 		if (result.valid()) {
-			lua["onUIReload"]();			
-            onUIFrame = lua["onUIFrame"];
-			onFrame = lua["onFrame"];
+			lua["visuals"]["onUIReload"]();			
+            onUIFrame = lua["visuals"]["onUIFrame"];
+			onFrame = lua["visuals"]["onFrame"];
 			LOG("script success");
 		}
 		else {

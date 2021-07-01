@@ -1,15 +1,15 @@
-title = AddVLabel("Screen 3!")
+title = visuals.addVLabel("Screen 3!")
 title.x = 320
 title.y = 240
 
 t = 0
-onFrame = function()
+visuals.onFrame = function()
     local x = 320 + (50 * math.sin(t) );
     title.x = x
     t = t +0.06
 end
 
-btn = AddVButton(function ()
+btn = visuals.ddVButton(function ()
 	Dismiss()
 end)
 btn.w = 40

@@ -1,21 +1,21 @@
-title = AddVLabel("Screen 2!")
+title = visuals.addVLabel("Screen 2!")
 title.x = 320
 title.y = 240
 
 t = 0
-onFrame = function()
+visuals.onFrame = function()
 	local y = 240 + (50 * math.sin(t) );
     title.y = y
     t = t +0.06
 end
 
-btn = AddVButton(function ()
+btn = visuals.addVButton(function ()
 	Dismiss()
 end)
 btn.w = 40
 btn.h = 40
 
-nxt = AddVButton(function()
+nxt = visuals.addVButton(function()
 	Present("scripts/screen3.lua")
 end)
 nxt.w = 40

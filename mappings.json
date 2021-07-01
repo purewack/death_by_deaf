@@ -4,10 +4,10 @@
 		"event" : 144,
 		"event_key" : 1,
 		"event_action" : "system.async_after(function()print(\"after\")end,1000,\"test\")",
-        "event_ending" : "system.shift = 0",
+        "event_ending" : "system.async_cancel(\"test\")"
 	},
 	{   
-        "device" : 1,
+        "device" : 0,
 		"event" : 144,
 		"event_key" : 2,
 		"event_action" : "print(\"transport.stop()\")"
@@ -22,6 +22,6 @@
         "device" : 0,
 		"event" : 144,
 		"event_key" : 5,
-		"event_action" : "system.navigate()"
+		"event_action" : "control.navigate()"
 	}
 ]

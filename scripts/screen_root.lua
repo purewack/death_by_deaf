@@ -1,5 +1,5 @@
-tex1 = CreateTexture("gfx/test_tex.png")
-img = AddVImage();
+tex1 = visuals.createTexture("gfx/test_tex.png")
+img = visuals.addVImage();
 img.x = 300
 img.y = 200
 img.tex = tex1
@@ -7,8 +7,8 @@ img.w = 100
 img.h = 100
 
 
-tiles = CreateTexture("gfx/test_tiles.png")
-img2 = AddVImage();
+tiles = visuals.createTexture("gfx/test_tiles.png")
+img2 = visuals.addVImage();
 img2.x = 400
 img2.y = 200
 img2.tex = tiles
@@ -20,7 +20,7 @@ img2.tile_x = 1
 img2.tile_y = 0
 
 
-nxt = AddVButton(function()
+nxt = visuals.addVButton(function()
 Present("scripts/screen2.lua")
 end)
 nxt.w = 40
@@ -28,16 +28,16 @@ nxt.h = 40
 nxt.x = 600
 nxt.y = 400
 
-nxt2 = AddVButton(function()
+nxt2 = visuals.addVButton(function()
 Present("scripts/screen3.lua")
-Message("Skipped seq.")
+visuals.message("Skipped seq.")
 end)
 nxt2.w = 40
 nxt2.h = 40
 nxt2.x = 500
 nxt2.y = 400
 
-sv = AddVButton(function()
+sv = visuals.addVButton(function()
     
     first = {
         duration = 2000,
@@ -57,27 +57,20 @@ sv = AddVButton(function()
         end
     }
     --CancelVAction("lol")
-    AddVSequence({first,waitt,second},"lol")
+    visuals.addVSequence({first,waitt,second},"lol")
 end)
 sv.gx = 1
 sv.gy = 7
 sv.tag = "sv"
 
-nx = AddVButton(function ()
-onNavigation(true)
-end)
-nx.gx = 2
-nx.gy = 7
 
-lbl = AddVLabel("hello");
+
+lbl = visuals.addVLabel("hello");
 lbl.font = 1
 lbl.size = 40
 
-pp = function() print("ppp") end
-system.push_command("system.async_after(pp,1000,\"after\")")
-
 t = 0
-onFrame = function ()
+visuals.onFrame = function ()
 local x = 320 + (200 * math.sin(t) );
    	local y = 288 - (100 * math.sin(t*2) );
    	lbl.x = x;
@@ -85,19 +78,8 @@ local x = 320 + (200 * math.sin(t) );
  	t = t + 0.02;
 end
 
-navigables = {lbl,sv,nx}
+control.navigables = {lbl,sv}
 
-unitmap[ev_note_on][key_shift] = function()
-    CancelVSequence("hold test")
-    system.async_after(function()
-        if controls[key_shift].state == true then
-            print("holding")
-        end
-    end, 1000, "hold test")
-end
-unitmap[ev_note_off][key_shift] = function()
-    CancelVSequence("hold test")
-end
-unitmap[ev_note_on][key_pad2] = function()
-   print("post added event") 
+control.unitmap[control.ev_note_on][control.key_pad2] = function()
+   print("post added event")
 end
