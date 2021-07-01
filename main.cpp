@@ -323,7 +323,20 @@ void lua_init()
     };
     
     l_system["load_sesh"] = [](std::string path){
+        
+    };
     
+    l_system["readJSON"] = [=](std::string path){
+        lua["io"]["input"](path,"r");
+        auto text = lua["io"]["read"]("*all");
+        lua["current_json"] = lua["json"]["decode"](text);
+        lua.script("io.input():close()");
+    };
+    l_system["writeJSON"] = [=](std::string path){        
+        lua["io"]["output"](path,"w");
+        auto to_write = lua["json"]["encode"](lua["current_json"]);
+        lua["io"]["write"](to_write);
+        lua.script("io.output():close()");
     };
 
     l_control["shift"] = 0;
@@ -362,9 +375,8 @@ void lua_init()
         focal += (prev ? -1 : 1);
         if(focal > count) focal = 1;
         if(focal < 1) focal = count;
+        lua["control"]["focus_idx"] = focal;
 
-        //l_control["focus_idx"] = focal;
-        
         for (const auto& key_value_pair : navigables ) {
              sol::object key = key_value_pair.first;
              sol::object value = key_value_pair.second;
@@ -375,6 +387,46 @@ void lua_init()
                  break;
              }
         }
+
+    };
+    l_control["checkEvent"] = [=](int w, int ev, int note, int vel){
+
+        if (ev == lua["control"]["ev_note_on"] and vel == 0) {
+            ev = lua["control"]["ev_note_off"];
+        }
+
+        sol::function action;
+        if(w)
+            action = lua["control"]["map"][ev][note];
+        else 
+            action = lua["control"]["unitmap"][ev][note];      
+            
+        if (action){
+            lua["control"]["ev_vel"] = vel;
+            action();
+        }
+        
+        //mevents.insert(mevents.begin(),m->print());
+        //if(mevents.size() > 5) mevents.pop_back();
+    };
+    
+    //only supply a table of midi event mappings
+    l_control["mapMidi"] = [=](sol::table mappings){
+        
+        mappings.for_each([=](sol::object const& key, sol::object const& value) {
+            auto m = value.as<sol::table>();
+            sol::table target;
+            
+            int d = m["device"];
+            if(d > 0) target = lua["control"]["map"];
+            else target = lua["control"]["unitmap"];
+            
+            std::string code = m["event_action"];
+            auto lr = lua.load(code);
+            if(lr.valid()){
+                target[m["event"]][m["event_key"]] = lr.get<sol::protected_function>();
+            }
+        });
     };
     
 	
@@ -906,12 +958,6 @@ void screen()
 	CloseWindow();
 }
 
-void checkEvent(MidiData* m)
-{
-	lua["checkMidi"](m->w,m->s,m->n,m->v);
-    mevents.insert(mevents.begin(),m->print());
-    if(mevents.size() > 5) mevents.pop_back();
-}
 
 void pollCtrl()
 {
@@ -927,18 +973,11 @@ void pollCtrl()
 			float yy = b->y - b->h*b->a_y;
 			auto r = Rectangle{xx,yy,b->w,b->h};
 			if(CheckCollisionPointRec(m,r)){
-                MidiData m;
-                m.w = 0;
-                m.c = 0;
-                m.s = b->type;
-				
                 if((not b->state and bb and not bo) or (b->state and not bb and bo)){
 					b->state = bb;
-                    m.n = b->note;
-                    m.v = b->state*127;
-                    checkEvent(&m);
-				}
-                  
+                    int vel = b->state*127;
+                    lua["control"]["checkEvent"](0,b->type,b->note,vel);
+                }
 			}
 		}
         else if(VButton* b = dynamic_cast<VButton*>(e))
@@ -993,18 +1032,16 @@ void pollMidi()
 
 			unsigned char bytes[3];
 			int n=0;
-			MidiData m;
 
 			for (int i=0; i<nBytes; i++ ){
 				bytes[n] = rawmidi[i];
 				n++;
 				if(n==3){
 					n = 0;
-                    m.w = d;
-					m.parse(bytes);
 					//LOG(m.print());
                     std::lock_guard<std::mutex> lg(mtx_fps);
-					checkEvent(&m);
+                    lua["control"]["checkEvent"](d,bytes[0],bytes[1],bytes[2]);
+					//checkEvent(&m);
 				}
 			}
 		}

@@ -39,7 +39,9 @@ system.actions(true)
 system.chain(true)
 system.bench(true)
 system.midi(true)
-loadfile(root .. "scripts/midi.lua")()
+
+system.readJSON(root .. "config/def_controls.json")
+control.mapMidi(current_json);
 
 visuals.onUIReload = function () 
 	
