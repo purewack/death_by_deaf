@@ -3,8 +3,8 @@
         "device" : 0,
 		"event" : 144,
 		"event_key" : 1,
-		"event_action" : "print(\"system.shift(127)\")",
-        "event_ending" : "print(\"system.shift(0)\")",
+		"event_action" : "system.async_after(function()print(\"after\")end,1000,\"test\")",
+        "event_ending" : "system.shift = 0",
 	},
 	{   
         "device" : 1,

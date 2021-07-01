@@ -240,7 +240,8 @@ struct VTimer : public VElement {
 
 void lua_init()
 {
-
+    std::function<void(sol::table ac,sol::optional<std::string> name)> addVAction;
+    std::function<void(sol::table ac,sol::optional<std::string> name)> addVSequence;
 	lua.open_libraries(sol::lib::base);
 	lua.open_libraries(sol::lib::table);
 	lua.open_libraries(sol::lib::string);
@@ -250,15 +251,48 @@ void lua_init()
 	lua["root"] = root;
 	lua.require_file("json",root + "scripts/json.lua");
 	lua["LoadFont"] = [](std::string name){
-    	auto f = LoadFont((name).c_str());
+    	auto f = LoadFont((root + name).c_str());
         fonts.push_back(f);
 	};
     lua["UIFont"] = [](int i){
         if(i >= 0 and i < fonts.size()) ui_font = fonts[i];
     };
+	lua["GridDiv"] = [](int d){
+		g_div = d;
+	};
+	lua["GridW"] = []() -> int{
+		return (S_WIDTH)/g_div;
+	};
+	lua["GridH"] = []() -> int{
+		return (S_HEIGHT)/g_div;
+	};
+	lua["Grid"] = [](bool state){
+		layout_grid = state;
+	};
+	lua["Actions"] = [](bool state){
+		actions_view = state;
+	};
+	lua["Bench"] = [](bool state){
+		bench_view = state;
+	};
+	lua["Chain"] = [](bool state){
+		chain_view = state;
+	};
+	lua["Midi"] = [](bool state){
+		midi_view = state;
+	};
+	lua["ToggleAnimation"] = [](){
+		if(onFrame) onFrame = nullptr;
+		else onFrame = lua["onFrame"];
+	};
+    
     
     
     auto l_system = lua["system"].get_or_create<sol::table>();
+    l_system["push_command"] = [](std::string cmd){
+        commands.push_back(cmd);
+    };
+    l_system["shift"] = (unsigned int)0;
     l_system["navigate"] = [=](){
         sol::table navigables = lua["navigables"];
         if(navigables == sol::nil) return;
@@ -292,6 +326,30 @@ void lua_init()
                  break;
              }
         }
+    };
+    
+    l_system["load"] = [](std::string path){
+    
+    };
+    
+    l_system["async_after"] = [=](sol::function action, int after_ms, std::string withName){  
+
+		auto w = new VAction();
+        w->time_to_take = std::chrono::duration_cast<fpstime>(std::chrono::milliseconds{after_ms});
+		
+        auto a = new VAction();
+        a->time_to_take = fpstime{0};
+        a->action = action;
+        
+        auto s = new VSequence();
+		s->time_current = fpstime{0};
+        s->exec_ratio = 0.0f;
+        s->count = 1;
+	    s->name = withName;
+        s->actions.push_back(w);
+        s->actions.push_back(a);
+                  
+        actions.push_back(s);
     };
     
     
@@ -440,7 +498,7 @@ void lua_init()
             );
     };
 	
-	auto addVAction = [](sol::table ac,sol::optional<std::string> name){
+	addVAction = [](sol::table ac,sol::optional<std::string> name){
 		
         /*
         VAction table:
@@ -471,9 +529,7 @@ void lua_init()
         LOG("new action: " + s->name);
 		actions.push_back(s);
 	};
-    lua["AddVAction"] = addVAction;
-    
-    lua["AddVSequence"]= [](sol::table ac,sol::optional<std::string> name){
+    addVSequence = [](sol::table ac,sol::optional<std::string> name){
         /*
         AddVSequnece(
         {
@@ -509,9 +565,10 @@ void lua_init()
             s->actions.push_back(a);
             s->count += 1;
         });
-        
 		actions.push_back(s);
     };
+    lua["AddVAction"] = addVAction;
+    lua["AddVSequence"]= addVSequence;
 	
 	lua["MoveVElement"] = [=](VElement* v, float x, float y, int in_time){
 		if(v == nullptr) {
@@ -547,31 +604,6 @@ void lua_init()
 		message_timer = std::chrono::duration_cast<fpstime>(std::chrono::seconds{2});
 	};
 	
-	lua["GridDiv"] = [](int d){
-		g_div = d;
-	};
-	lua["GridW"] = []() -> int{
-		return (S_WIDTH)/g_div;
-	};
-	lua["GridH"] = []() -> int{
-		return (S_HEIGHT)/g_div;
-	};
-	lua["Grid"] = [](bool state){
-		layout_grid = state;
-	};
-	lua["Actions"] = [](bool state){
-		actions_view = state;
-	};
-	lua["Bench"] = [](bool state){
-		bench_view = state;
-	};
-	lua["Chain"] = [](bool state){
-		chain_view = state;
-	};
-	lua["Midi"] = [](bool state){
-		midi_view = state;
-	};
-	
 	lua["Present"] = [](std::string scr){
 		current_script = scr;
 		chain.push_back(scr);
@@ -582,12 +614,8 @@ void lua_init()
 		current_script = chain.back();
 		reload = true;
 	};
-	lua["ToggleAnimation"] = [](){
-		if(onFrame) onFrame = nullptr;
-		else onFrame = lua["onFrame"];
-	};
 
-	lua.script_file(root + "scripts/_loader.lua");
+	lua.script_file(root + "scripts/_init.lua");
 };
 
 void script(){
@@ -649,6 +677,7 @@ void do_actions()
         if(seq->actions.size() == 0) continue;
         
         auto ac = seq->actions.front();
+        if(ac->action)
         ac->action(std::chrono::duration_cast<std::chrono::milliseconds>(seq->time_current).count());
 		seq->time_current += fpstime{1};
 		seq->exec_ratio = float(seq->time_current.count()) / float(ac->time_to_take.count());
@@ -857,6 +886,13 @@ void screen()
 	CloseWindow();
 }
 
+void checkEvent(MidiData* m)
+{
+	lua["checkMidi"](m->w,m->s,m->n,m->v);
+    mevents.insert(mevents.begin(),m->print());
+    if(mevents.size() > 5) mevents.pop_back();
+}
+
 void pollCtrl()
 {
     std::lock_guard<std::mutex> lg(mtx_fps);
@@ -955,13 +991,10 @@ void pollMidi()
 	}
 }
 
-void checkEvent(MidiData* m)
-{
-	lua["checkMidi"](m->w,m->s,m->n,m->v);
-    mevents.insert(mevents.begin(),m->print());
-    if(mevents.size() > 5) mevents.pop_back();
+void audio_init(){
+    
 }
-	
+
 void init()
 {
 	current_script = "scripts/screen_root.lua";
@@ -974,7 +1007,9 @@ void init()
 	
 	lua_init();
 	script();
+    audio_init();
 }
+
 
 int main(int argc, char* argv[]) 
 {
@@ -982,7 +1017,6 @@ int main(int argc, char* argv[])
 	makeRoot(argv[0]);
 		
 	init();
-    tests();
 	static std::atomic_bool running = true;
 	std::thread thread_input([=](){
 		while(running){
@@ -991,7 +1025,7 @@ int main(int argc, char* argv[])
 			usleep(5000);
 		}
 	});
-	
+
 	screen();	
 	
 	running = false;
@@ -1000,6 +1034,3 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-void tests(){
-    
-}

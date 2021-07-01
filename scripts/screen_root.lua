@@ -73,6 +73,8 @@ lbl = AddVLabel("hello");
 lbl.font = 1
 lbl.size = 40
 
+pp = function() print("ppp") end
+system.push_command("system.async_after(pp,1000,\"after\")")
 
 t = 0
 onFrame = function ()

@@ -87,14 +87,6 @@ struct MidiElement{
 	static const int HOLD_TIME = 2000;
 };
 
-void init();
-void lua_init();
-void check_script();
-void script();
-void pollMidi();
-void checkEvent(MidiData* m);
-void pollCtrl();
-
 struct VAction;
 struct VSequence;
 struct VElement;
