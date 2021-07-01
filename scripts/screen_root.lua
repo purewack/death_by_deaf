@@ -87,6 +87,17 @@ end
 
 navigables = {lbl,sv,nx}
 
+unitmap[ev_note_on][key_shift] = function()
+    CancelVSequence("hold test")
+    system.async_after(function()
+        if controls[key_shift].state == true then
+            print("holding")
+        end
+    end, 1000, "hold test")
+end
+unitmap[ev_note_off][key_shift] = function()
+    CancelVSequence("hold test")
+end
 unitmap[ev_note_on][key_pad2] = function()
    print("post added event") 
 end

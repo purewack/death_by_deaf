@@ -404,7 +404,7 @@ void lua_init()
 	btn["selected"] = &VButton::selected;
 	btn["action"] = sol::property([](VButton* b, std::function<void(void)> f){b->onPress = f;});
 	btn["release"] = sol::property([](VButton* b, std::function<void(void)> f){b->onRelease = f;});
-	btn["state"] = sol::property([](VButton* b, bool s){ b->state = s; if(b->onPress and s) b->onPress(); });
+	btn["state"] = sol::property([](VButton* b)->bool{return b->state;}, [](VButton* b, bool s){ b->state = s; if(b->onPress and s) b->onPress(); });
 	btn["onPress"] = [](VButton* b){b->onPress();};
 	btn["onRelease"] = [](VButton* b){b->onRelease();};
     
