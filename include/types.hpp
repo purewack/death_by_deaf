@@ -70,6 +70,9 @@ bool in_console = false;
 bool reload = false;
 bool shift_down = false;
 
+std::chrono::high_resolution_clock::time_point time_ac_now,time_ac_old; //start and end points for timer
+std::chrono::milliseconds time_ac_dur;
+
 struct ScopedTimer{
 	std::chrono::high_resolution_clock::time_point start,end; //start and end points for timer
 	std::chrono::nanoseconds* result; //store result in this address

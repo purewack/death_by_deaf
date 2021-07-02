@@ -40,7 +40,7 @@ Vector2 DrawString(std::string str ,float x, float y, float s, Color c, float an
 
 struct VAction{
 	std::string name;
-	fpstime time_to_take;
+	std::chrono::milliseconds time_to_take;
     sol::function action;
 };
 
@@ -48,7 +48,7 @@ struct VSequence{
     std::string name;
     int count;
     std::vector<VAction*> actions;
-	fpstime time_current;
+	std::chrono::milliseconds time_current;
 	float exec_ratio;
     ~VSequence(){
     	for(auto a : actions) delete a;
@@ -304,14 +304,14 @@ void lua_init()
     };
     l_system["async_after"] = [=](sol::function action, int after_ms, std::string withName){  
 		auto w = new VAction();
-        w->time_to_take = std::chrono::duration_cast<fpstime>(std::chrono::milliseconds{after_ms});
+        w->time_to_take = std::chrono::milliseconds{after_ms};
 		
         auto a = new VAction();
-        a->time_to_take = fpstime{0};
+        a->time_to_take = std::chrono::milliseconds{0};
         a->action = action;
         
         auto s = new VSequence();
-		s->time_current = fpstime{0};
+		s->time_current = std::chrono::milliseconds{0};
         s->exec_ratio = 0.0f;
         s->count = 1;
 	    s->name = withName;
@@ -343,9 +343,9 @@ void lua_init()
 
     l_control["shift"] = 0;
     l_control["ev_vel"] = 0;
-    l_control["ev_note_on"] = 0x90;
-    l_control["ev_note_off"] = 0x80;
-    l_control["ev_note_cc"] = 0xA0;
+    l_control["ev_note_on"] = MidiBytes::on;
+    l_control["ev_note_off"] = MidiBytes::off;
+    l_control["ev_note_cc"] = MidiBytes::cc;
     l_control["map"].get_or_create<sol::table>();
     l_control["map"][0x90].get_or_create<sol::table>();
     l_control["map"][0x80].get_or_create<sol::table>();
@@ -393,8 +393,8 @@ void lua_init()
     };
     l_control["checkEvent"] = [=](int w, int ev, int note, int vel){
 
-        if (ev == lua["control"]["ev_note_on"] and vel == 0) {
-            ev = lua["control"]["ev_note_off"];
+        if (ev == MidiBytes::on and vel == 0) {
+            ev = MidiBytes::off;
         }
 
         sol::function action;
@@ -408,8 +408,17 @@ void lua_init()
             action();
         }
         
-        //mevents.insert(mevents.begin(),m->print());
-        //if(mevents.size() > 5) mevents.pop_back();
+        std::string s;
+        s += "[";
+        s += std::to_string(w);
+        s += "] ev:";
+        s += std::to_string(ev);
+        s += " n:";
+        s += std::to_string(note);
+        s += " v:";
+        s += std::to_string(vel);
+        mevents.insert(mevents.begin(),s);
+        if(mevents.size() > 5) mevents.pop_back();
     };
     
     //only supply a table of midi event mappings
@@ -417,11 +426,12 @@ void lua_init()
         
         mappings.for_each([=](sol::object const& key, sol::object const& value) {
             auto m = value.as<sol::table>();
-            sol::table target;
             
-            int d = m["device"];
-            if(d > 0) target = lua["control"]["map"];
-            else target = lua["control"]["unitmap"];
+            sol::table target = lua["control"]["map"];
+            // sol::table target;
+//             int d = m["device"];
+//             if(d > 0) target = lua["control"]["map"];
+//             else target = lua["control"]["unitmap"];
             
             std::string code = m["event_action"];
             auto lr = lua.load(code);
@@ -579,7 +589,7 @@ void lua_init()
                 v->y = sy + std::pow(std::sin(3.1415f * dt/tt),2)*dy;
             }
         );
-		addVAction(ac,sol::optional<std::string>("move_smooth"));
+		lua["visuals"]["addVAction"](ac,sol::optional<std::string>("move_smooth"));
 	};
 	l_visuals["offsetVElement"] = [](VElement* v, float x, float y){
 		if(v == nullptr) {
@@ -621,11 +631,11 @@ void lua_init()
         },"action key")
         */
 		auto a = new VAction();
-        a->time_to_take = std::chrono::duration_cast<fpstime>(std::chrono::milliseconds{ac["duration"]});
+        a->time_to_take = std::chrono::milliseconds{ac["duration"]};
 		a->action = ac["action"];
         
         auto s = new VSequence();
-		s->time_current = fpstime{0};
+		s->time_current = std::chrono::milliseconds{0};
 	    s->actions.push_back(a);
         s->exec_ratio = 0.0f;
         s->count = 1;
@@ -655,7 +665,7 @@ void lua_init()
         */
         
         auto s = new VSequence();
-		s->time_current = fpstime{0};
+		s->time_current = std::chrono::milliseconds{0};
         s->exec_ratio = 0.0f;
         s->count = 0;
 	    
@@ -666,7 +676,7 @@ void lua_init()
         ac.for_each([=](sol::object const& key, sol::object const& value) {
             auto t = value.as<sol::table>();
     		auto a = new VAction();
-            a->time_to_take = std::chrono::duration_cast<fpstime>(std::chrono::milliseconds{t["duration"]});
+            a->time_to_take = std::chrono::milliseconds{t["duration"]};
     		a->action = t["action"];
             s->actions.push_back(a);
             s->count += 1;
@@ -746,8 +756,11 @@ void check_script()
 	}		
 };
 
+
 void do_actions()
-{
+{ 
+    using namespace std::chrono;
+
 	auto timer_actions = new ScopedTimer(&bench_actions);
 	if(actions_view) DrawString("Actions:",0,0,16,GRAY);
 	int yy = 1;
@@ -756,13 +769,13 @@ void do_actions()
         
         auto ac = seq->actions.front();
         if(ac->action)
-        ac->action(std::chrono::duration_cast<std::chrono::milliseconds>(seq->time_current).count());
-		seq->time_current += fpstime{1};
+        ac->action((seq->time_current).count());
+		seq->time_current += time_ac_dur;
 		seq->exec_ratio = float(seq->time_current.count()) / float(ac->time_to_take.count());
         
         if(actions_view) {
             auto bounds = DrawString("("
-            + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(ac->time_to_take).count())
+            + std::to_string((ac->time_to_take).count())
             + "ms):" 
             + seq->name
             + ":"
@@ -776,7 +789,7 @@ void do_actions()
     	
         if(seq->time_current >= ac->time_to_take and seq->actions.size()){
             seq->actions.erase(seq->actions.begin());
-            seq->time_current = fpstime{0};
+            seq->time_current = std::chrono::milliseconds{0};
         }    
 	}
 	actions.erase(std::remove_if(
@@ -876,7 +889,11 @@ void do_console()
 void screen()
 {
 	while(not WindowShouldClose()){
-		
+        
+        time_ac_old = time_ac_now;
+        time_ac_now = std::chrono::high_resolution_clock::now();
+        time_ac_dur = std::chrono::duration_cast<std::chrono::milliseconds>(time_ac_now-time_ac_old);
+    
 		BeginDrawing();
 		ClearBackground(BLACK);
 		auto timer_fps = new ScopedTimer(&bench_fps);

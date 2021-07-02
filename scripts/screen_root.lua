@@ -80,6 +80,19 @@ end
 
 control.navigables = {lbl,sv}
 
-control.unitmap[control.ev_note_on][control.key_pad2] = function()
-   print("post added event")
+
+
+local n_on = control.ev_note_on
+local n_off = control.ev_note_off
+local n_cc = control.ev_note_cc
+
+control.unitmap[n_on][1] = function()
+    system.async_after(
+        function()
+            print("after")
+        end,1000,"test"
+    )
+end
+control.unitmap[n_off][1] = function()
+    system.async_cancel("test")
 end

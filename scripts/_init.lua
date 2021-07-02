@@ -40,8 +40,6 @@ system.chain(true)
 system.bench(true)
 system.midi(true)
 
-system.readJSON(root .. "config/def_controls.json")
-control.mapMidi(current_json);
 
 visuals.onUIReload = function () 
 	
