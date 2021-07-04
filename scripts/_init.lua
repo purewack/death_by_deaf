@@ -56,7 +56,6 @@ visuals.onUIReload = function ()
 	control_names[control.key_more] = "control.key_more"
 	control_names[control.key_ok] = "control.key_ok"
 
-    print("1")
 	for c=1,4 do
 		control.units[c] = visuals.addVUnitButton(c) 
 		control.units[c].gx = 0
@@ -64,8 +63,6 @@ visuals.onUIReload = function ()
 		control.units[c].y = 550
 		control.units[c].ax = 0
 	end
-
-    print("2")
 	
 	control.units[control.key_less] = visuals.addVUnitButton(control.key_less)
 	control.units[control.key_more] = visuals.addVUnitButton(control.key_more)
@@ -107,5 +104,6 @@ visuals.onUIReload = function ()
 	for c=1,23 do
 		control.units[c].tag = control_names[c]
 	end	
-
+    
+    print("_init.lua: unit setup end")
 end
