@@ -64,7 +64,7 @@ public:
     ~Clip();
     
     void clear();
-    void next();
+    void update();
     void setOnSample(std::function<void(void)> a);
     void setOnLoop(std::function<void(void)> a);
     void merge();
@@ -95,19 +95,22 @@ struct AudioAction{
 };
 
 struct AudioActionQue {
-private:
+
     frametime tick = frametime{0};
     frametime last = frametime{0};
+    frametime period = frametime{0};
+    float period_ratio = 0.f;
+    int period_ticks = 0;
+    
     const int max_actions = 16;
     AudioAction actions[16];
     AudioAction actions_que[16];
     int actions_count = 0;
     int que_count = 0;
+    
     std::mutex m;
-public:
-    frametime period = frametime{0};
-    float period_ratio = 0.f;
-    int period_ticks = 0;
+    std::mutex p;
+
     int add(std::function<void(void)> f, frametime when);
     int add(std::function<void(void)> f, float ratio);
     int addAbsolute(std::function<void(void)> f, frametime when);

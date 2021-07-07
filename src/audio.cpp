@@ -6,6 +6,8 @@ float out01;
 
 int audioProcess (jack_nframes_t nframes, void *arg)
 {
+    std::lock_guard<std::mutex> lg(audioActionQue.p);
+    
     auto t = new ScopedTimer(&bench_dsp);
 
     inl = (float*)jack_port_get_buffer(input_portl, nframes);
@@ -21,7 +23,6 @@ int audioProcess (jack_nframes_t nframes, void *arg)
  //        phase += freq_delta;
  //        if (phase > 1.0f) phase -= 1.0f;
  //    }
-    
     audioActionQue();
     for(int i=0; i<nframes; i++){
         float spl0 = inl[i];
@@ -279,10 +280,10 @@ void Clip::clear(){
     n_length = 0;
     n_head = 0;
     _data = _aData;
-    next();
+    update();
 }
 
-void Clip::next(){
+void Clip::update(){
     _p.lock();
     if(n_swap_data){
         if(_data == _aData)
@@ -344,7 +345,7 @@ void clip_stop(Clip* c){
         case Clip::State::play:
             c->n_state = Clip::State::stop;
             c->n_head = 0;
-            c->next();
+            c->update();
         break;
 
         case Clip::State::base:
@@ -358,28 +359,28 @@ void clip_rec(Clip* c){
         case Clip::State::clear:
         case Clip::State::stop:
             c->n_state = Clip::State::base;
-            c->next();
+            c->update();
         break;
 
         case Clip::State::play:
             c->n_state = Clip::State::dub;
-            c->next();
+            c->update();
         break;
 
         case Clip::State::dub:
             c->n_state = Clip::State::merge;
-            c->next();
+            c->update();
             
             c->merge();
             c->n_swap_data = true;
             c->n_state = Clip::State::play;
-            c->next();
+            c->update();
         break;
 
         case Clip::State::base:
             c->n_head = 0;
             c->n_state = Clip::State::play;
-            c->next();
+            c->update();
         break;
     }
 }
@@ -394,7 +395,7 @@ void clip_play(Clip* c){
         if(c->length){
             c->n_head = 0;
             c->n_state = Clip::State::play;
-            c->next();
+            c->update();
         }
         break;
 

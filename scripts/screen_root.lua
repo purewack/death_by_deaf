@@ -27,6 +27,7 @@ end
 system.async_after(function()
     audio.que.clip.rec(test_clip,1.0)
     audio.que.clip.rec(test_clip2,1.5)
+    audio.que.confirm()
     audio.que.clip.rec(test_clip,2.0)
     audio.que.clip.rec(test_clip2,4.0)
     audio.que.confirm()
