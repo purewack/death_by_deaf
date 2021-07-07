@@ -23,28 +23,49 @@ control.unitmap[n_off][control.key_stop] = function()
     system.async_cancel("stop_hold");
 end
 
+
 system.async_after(function()
-    audio.q_rec_clip(test_clip,0)
-    audio.q_rec_clip(test_clip2,20)
+    audio.que.clip.rec(test_clip,1.0)
+    audio.que.clip.rec(test_clip2,1.5)
+    audio.que.clip.rec(test_clip,2.0)
+    audio.que.clip.rec(test_clip2,4.0)
+    audio.que.confirm()
+end,500,"test")
 
-    audio.q_rec_clip(test_clip,50)
-    audio.q_rec_clip(test_clip2,50)
-    
-    audio.q_confirm()
-end,3000,"test audio q")
+prog = visuals.addVTimer()
+prog.x = 320
+prog.y = 200
+prog.w = 200
+prog.circular = false
+lbl_q_period = visuals.addVLabel("")
+lbl_q_period.x = 320
+lbl_q_period.y = 240
+lbl_q_count = visuals.addVLabel("")
+lbl_q_count.x = 320
+lbl_q_count.y = 260
 
-visuals.onFrame = function()     
+audio.que.period(500)
+
+visuals.onFrame = function()    
     local c = test_clip
     local bb = control.units[control.key_pad1]
-    if(c.state == CLEAR) then bb.v_hue = 0; end
-    if(c.state == STOP) then bb.v_hue = visuals.HUE_ORANGE; end
-    if(c.state == BASE or c.state == DUB) then bb.v_hue = visuals.HUE_RED; end
-    if(c.state == PLAY) then bb.v_hue = visuals.HUE_GREEN; end
-    
+    if(c.isClear) then bb.v_hue = 0; end
+    if(c.isStopped) then bb.v_hue = visuals.HUE_ORANGE; end
+    if(c.isPlaying) then bb.v_hue = visuals.HUE_GREEN; end
+    if(c.isRecording) then bb.v_hue = visuals.HUE_RED; end
+    if(c.isMerging) then bb.v_hue = visuals.HUE_PURPLE; end
+
     local c = test_clip2
     local bb = control.units[control.key_pad2]
-    if(c.state == CLEAR) then bb.v_hue = 0; end
-    if(c.state == STOP) then bb.v_hue = visuals.HUE_ORANGE; end
-    if(c.state == BASE or c.state == DUB) then bb.v_hue = visuals.HUE_RED; end
-    if(c.state == PLAY) then bb.v_hue = visuals.HUE_GREEN; end
+    if(c.isClear) then bb.v_hue = 0; end
+    if(c.isStopped) then bb.v_hue = visuals.HUE_ORANGE; end
+    if(c.isPlaying) then bb.v_hue = visuals.HUE_GREEN; end
+    if(c.isRecording) then bb.v_hue = visuals.HUE_RED; end
+    if(c.isMerging) then bb.v_hue = visuals.HUE_PURPLE; end
+    
+    local t = audio.que.progress()
+    local ct = audio.que.count()
+    prog.progress = t
+    lbl_q_period.text = tostring(t)
+    lbl_q_count.text = tostring(ct)
 end

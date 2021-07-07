@@ -5,6 +5,7 @@
 #include <jack/jack.h>
 
 #define AUDIO_CLIP_SIZE 1048576 //1MB 8*1024*1024 ~ 21s @ 48kHz
+
 using frametime = std::chrono::duration<int64_t, std::ratio<1,48000>>;
 
 enum MidiBytes: int{
@@ -27,6 +28,7 @@ inline jack_port_t *output_portr;
 inline jack_client_t *client;
 inline jack_default_audio_sample_t *inl, *inr, *outl, *outr;
  
+void audio_end();
 int audio_init();
 int audioProcess (jack_nframes_t nframes, void *arg);
 
@@ -34,63 +36,85 @@ int audioProcess (jack_nframes_t nframes, void *arg);
 struct AudioAction;
 struct AudioActionQue;
 struct Clip;
+struct Track;
 
 struct Clip {
   
 public:
+    
     unsigned long id;
     enum class State:int{
-        clear,
+        none = -1,
+        clear = 0,
         stop,
         base,
         play,
-        dub
+        dub,
+        merge
     };
     //std::atomic<State> state;
-    State state;
+    State state, n_state;
+    unsigned long length, n_length;
+    unsigned long head, n_head;
+    bool n_swap_data = false;
     
-    unsigned long length;
-    unsigned long head;
-   
-    void process(float* inout);
+    void operator()(float* inout);
     
     Clip();
     ~Clip();
     
     void clear();
-    void stop();
-    void rec();
-    void play();
     void next();
-    
+    void setOnSample(std::function<void(void)> a);
+    void setOnLoop(std::function<void(void)> a);
+    void merge();
 private:
-    float *dataStream, *dataStart, *dataDub, *aData;
+    float *_aData, *_bData, *_cData, *_data;
     
+    std::mutex _s;
+    std::mutex _l;
+    std::mutex _p;
+    std::function<void(void)> _onSample;
+    std::function<void(void)> _onLoop;
+    
+    unsigned int _undo_level;
     
     friend struct AudioActionQue;
 };
+    
+void clip_stop(Clip* c);
+void clip_rec(Clip* c);
+void clip_play(Clip* c);
 
 inline Clip test_clip, test_clip2;
 
 
 struct AudioAction{
     std::function <void(void)> action;
-    bool done = true;
-    bool qued = true;
-    frametime when = frametime{0};
+    frametime offset = frametime{0};
 };
 
 struct AudioActionQue {
 private:
-    frametime ft = frametime{0};
+    frametime tick = frametime{0};
+    frametime last = frametime{0};
     const int max_actions = 16;
     AudioAction actions[16];
-    int free_slot = 0;
+    AudioAction actions_que[16];
+    int actions_count = 0;
+    int que_count = 0;
     std::mutex m;
 public:
-    void add(std::function<void(void)> f, frametime when);
-    void confirm();
+    frametime period = frametime{0};
+    float period_ratio = 0.f;
+    int period_ticks = 0;
+    int add(std::function<void(void)> f, frametime when);
+    int add(std::function<void(void)> f, float ratio);
+    int addAbsolute(std::function<void(void)> f, frametime when);
     void clear();
-    void check();
+    void cancel(int i);
+    frametime confirm();
+    void operator()();
+    void operator++();
 };
 inline AudioActionQue audioActionQue;

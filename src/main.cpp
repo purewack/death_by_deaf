@@ -442,32 +442,87 @@ void lua_init()
         });
     };
     
-    l_audio["q_confirm"] = [](){
+    l_audio["que"].get_or_create<sol::table>();
+    l_audio["que"]["clip"].get_or_create<sol::table>();
+    l_audio["que"]["period"] = [](long p) {
+        audioActionQue.period = frametime{p};
+    };
+    l_audio["que"]["progress"] = []() -> float {
+        return audioActionQue.period_ratio;
+    };
+    l_audio["que"]["count"] = []() -> float {
+        return audioActionQue.period_ticks;
+    };
+    
+    l_audio["que"]["confirm"] = [](){
         audioActionQue.confirm();
     };
-    l_audio["q_clear_clip"] = [](Clip* c, long blocks_offset){
-        audioActionQue.add([=](){c->clear();},frametime{blocks_offset});
+    l_audio["que"]["clear"] = [](){
+        audioActionQue.clear();
     };
-    l_audio["q_stop_clip"] = [](Clip* c, long blocks_offset){
-        audioActionQue.add([=](){c->stop();},frametime{blocks_offset});
+    l_audio["que"]["clip"]["clear"] = [](Clip* c, float r) -> int{
+        return audioActionQue.add([=](){
+            c->clear();
+        },r);
     };
-    l_audio["q_rec_clip"] = [](Clip* c, long blocks_offset){
-        audioActionQue.add([=](){c->rec();},frametime{blocks_offset});
+    l_audio["que"]["clip"]["stop"] = [](Clip* c, float r) -> int{
+        return audioActionQue.add([=](){
+            clip_stop(c);
+        },r);
     };
-    l_audio["q_play_clip"] = [](Clip* c, long blocks_offset){
-        audioActionQue.add([=](){c->play();},frametime{blocks_offset});
+    l_audio["que"]["clip"]["rec"] = [](Clip* c, float r) -> int{
+        return audioActionQue.add([=](){
+            clip_rec(c);
+        },r);
+    };
+    l_audio["que"]["clip"]["play"] = [](Clip* c, float r) -> int{
+        return audioActionQue.add([=](){
+            clip_play(c);
+        },r);
     };
     lua["test_clip"] = &test_clip;
     lua["test_clip2"] = &test_clip2;
     
 	auto clip = lua.new_usertype<Clip>("Clip");
-    lua["CLEAR"] = 0;
-    lua["STOP"]  = 1;
-    lua["BASE"]  = 2;
-    lua["PLAY"]  = 3;
-    lua["DUB"]   = 4;
-    clip["state"] = sol::property([](Clip* c) -> int{return (int)c->state;});
-    
+    l_audio["constants"].get_or_create<sol::table>();
+    l_audio["constants"]["clip"].get_or_create<sol::table>();
+    l_audio["constants"]["clip"]["states"].get_or_create<sol::table>();
+    l_audio["constants"]["clip"]["states"]["clear"] = 0;
+    l_audio["constants"]["clip"]["states"]["stop"]  = 1;
+    l_audio["constants"]["clip"]["states"]["base"]  = 2;
+    l_audio["constants"]["clip"]["states"]["play"]  = 3;
+    l_audio["constants"]["clip"]["states"]["dub"]   = 4;
+    l_audio["constants"]["clip"]["states"]["merge"]   = 5;
+    clip["isClear"] = sol::property([](Clip* c){
+        return (c->state == Clip::State::clear);
+    });
+    clip["isStopped"] = sol::property([](Clip* c){
+        return (c->state == Clip::State::stop);
+    });
+    clip["isRecording"] = sol::property([](Clip* c){
+        return (c->state == Clip::State::base or c->state == Clip::State::dub or c->state == Clip::State::merge);
+    });
+    clip["isDubbing"] = sol::property([](Clip* c){
+        return (c->state == Clip::State::dub);
+    });
+    clip["isMerging"] = sol::property([](Clip* c){
+        return (c->state == Clip::State::merge);
+    });
+    clip["isPlaying"] = sol::property([](Clip* c){
+        return (c->state == Clip::State::play or c->state == Clip::State::dub);
+    });
+    clip.set("state", sol::readonly(&Clip::state));
+    clip["length"] = sol::property([](Clip* c) -> unsigned long {return (unsigned long)c->length;});
+    clip["head"] = sol::property([](Clip* c) -> float {
+        if(c->length){
+            return float(c->head) / float(c->length);
+        }
+        
+        return 0.f;
+    });
+    lua["clip_stop"] = [](Clip* c){clip_stop(c);};
+    lua["clip_rec"] = [](Clip* c){clip_rec(c);};
+    lua["clip_play"] = [](Clip* c){clip_play(c);};
     
 	auto elem = lua.new_usertype<VElement>("VElement");
     elem["id"] = sol::property([](VElement* v) -> unsigned long {return v->id;});
@@ -1023,7 +1078,7 @@ void screen()
             for(auto s : mevents){
                 DrawString(s,S_WIDTH-16,S_HEIGHT-16*y,16,{255,255,255,127+(127*(5-y)/5)},1.0,1.0);
                 y++;
-                    }
+            }
         }
 
         do_console();
@@ -1171,6 +1226,7 @@ int main(int argc, char* argv[])
     
     running = false;
     thread_input.join();
+    audio_end();
 	//////////////////
     // audio_init();
  //    while(1);
