@@ -445,7 +445,10 @@ void lua_init()
     l_audio["que"].get_or_create<sol::table>();
     l_audio["que"]["clip"].get_or_create<sol::table>();
     l_audio["que"]["period"] = [](long p) {
-        audioActionQue.period = frametime{p};
+        audioActionQue.period = p;
+    };
+    l_audio["que"]["tick"] = []() -> float {
+        return audioActionQue.tick;
     };
     l_audio["que"]["progress"] = []() -> float {
         return audioActionQue.period_ratio;
@@ -453,33 +456,44 @@ void lua_init()
     l_audio["que"]["count"] = []() -> float {
         return audioActionQue.period_ticks;
     };
-    
+      
     l_audio["que"]["confirm"] = [](){
         audioActionQue.confirm();
     };
     l_audio["que"]["clear"] = [](){
         audioActionQue.clear();
     };
-    l_audio["que"]["clip"]["clear"] = [](Clip* c, float r) -> int{
-        return audioActionQue.add([=](){
-            c->clear();
-        },r);
+    
+    l_audio["que"]["test"] = [](){
+        audioActionQue.add(AudioActionQue::q_test,8,0.5f);
     };
-    l_audio["que"]["clip"]["stop"] = [](Clip* c, float r) -> int{
-        return audioActionQue.add([=](){
-            clip_stop(c);
-        },r);
+    l_audio["que"]["rec"] = [](){
+        audioActionQue.add(AudioActionQue::q_rec,0,0.f);
     };
-    l_audio["que"]["clip"]["rec"] = [](Clip* c, float r) -> int{
-        return audioActionQue.add([=](){
-            clip_rec(c);
-        },r);
-    };
-    l_audio["que"]["clip"]["play"] = [](Clip* c, float r) -> int{
-        return audioActionQue.add([=](){
-            clip_play(c);
-        },r);
-    };
+    // l_audio["que"]["clip"]["clear"] = [](Clip* c, float r) -> int{
+ //        return audioActionQue.add([=](){
+ //            c->clear();
+ //            c->update();
+ //        },r);
+ //    };
+ //    l_audio["que"]["clip"]["stop"] = [](Clip* c, float r) -> int{
+ //        return audioActionQue.add([=](){
+ //            clip_stop(c);
+ //            c->update();
+ //        },r);
+ //    };
+ //    l_audio["que"]["clip"]["rec"] = [](Clip* c, float r) -> int{
+ //        return audioActionQue.add([=](){
+ //            clip_rec(c);
+ //            c->update();
+ //        },r);
+ //    };
+ //    l_audio["que"]["clip"]["play"] = [](Clip* c, float r) -> int{
+ //        return audioActionQue.add([=](){
+ //            clip_play(c);
+ //            c->update();
+ //        },r);
+ //    };
     lua["test_clip"] = &test_clip;
     lua["test_clip2"] = &test_clip2;
     
@@ -520,10 +534,10 @@ void lua_init()
         
         return 0.f;
     });
-    lua["clip_stop"] = [](Clip* c){clip_stop(c);};
-    lua["clip_rec"] = [](Clip* c){clip_rec(c);};
-    lua["clip_play"] = [](Clip* c){clip_play(c);};
-    
+    // lua["clip_stop"] = [](Clip* c){clip_stop(c);};
+ //    lua["clip_rec"] = [](Clip* c){clip_rec(c);};
+ //    lua["clip_play"] = [](Clip* c){clip_play(c);};
+ //
 	auto elem = lua.new_usertype<VElement>("VElement");
     elem["id"] = sol::property([](VElement* v) -> unsigned long {return v->id;});
 	elem["x"] = &VElement::x;
@@ -1218,7 +1232,13 @@ int main(int argc, char* argv[])
         while(running){
             pollMidi();
             pollCtrl();
-            usleep(5000);
+            usleep(10000);
+        }
+    });
+    std::thread thread_audio_supervise([=](){
+        while(running){
+            audio_supervisor();
+            usleep(10000);
         }
     });
 
@@ -1226,6 +1246,7 @@ int main(int argc, char* argv[])
     
     running = false;
     thread_input.join();
+    thread_audio_supervise.join();
     audio_end();
 	//////////////////
     // audio_init();

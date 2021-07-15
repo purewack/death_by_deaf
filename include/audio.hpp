@@ -1,8 +1,10 @@
 #pragma once
 #include <vector>
+#include <atomic>
 #include <rtmidi/RtMidi.h>
 #include <rtaudio/RtAudio.h>
 #include <jack/jack.h>
+#include <jack/ringbuffer.h>
 
 #define AUDIO_CLIP_SIZE 1048576 //1MB 8*1024*1024 ~ 21s @ 48kHz
 
@@ -31,7 +33,7 @@ inline jack_default_audio_sample_t *inl, *inr, *outl, *outr;
 void audio_end();
 int audio_init();
 int audioProcess (jack_nframes_t nframes, void *arg);
-
+void audio_supervisor();
 
 struct AudioAction;
 struct AudioActionQue;
@@ -68,18 +70,14 @@ public:
     void setOnSample(std::function<void(void)> a);
     void setOnLoop(std::function<void(void)> a);
     void merge();
+    void undo();
 private:
     float *_aData, *_bData, *_cData, *_data;
     
-    std::mutex _s;
-    std::mutex _l;
-    std::mutex _p;
     std::function<void(void)> _onSample;
     std::function<void(void)> _onLoop;
     
     unsigned int _undo_level;
-    
-    friend struct AudioActionQue;
 };
     
 void clip_stop(Clip* c);
@@ -90,34 +88,37 @@ inline Clip test_clip, test_clip2;
 
 
 struct AudioAction{
-    std::function <void(void)> action;
-    frametime offset = frametime{0};
+    std::atomic<bool> pending;
+    std::atomic<long> offset = 0;
+    void (*action)(int);
+    int arg;
 };
 
 struct AudioActionQue {
+    AudioActionQue();
 
-    frametime tick = frametime{0};
-    frametime last = frametime{0};
-    frametime period = frametime{0};
-    float period_ratio = 0.f;
-    int period_ticks = 0;
+    std::atomic<long> tick = 0;
+    std::atomic<long> last = 0;
+    std::atomic<long> period = 0;
+    std::atomic<float> period_ratio = 0.f;
+    std::atomic<int> period_ticks = 0;
     
     const int max_actions = 16;
     AudioAction actions[16];
-    AudioAction actions_que[16];
-    int actions_count = 0;
-    int que_count = 0;
-    
-    std::mutex m;
-    std::mutex p;
+    AudioAction que[16];
+    std::atomic<int> actions_count = 0;
+    std::atomic<int> que_count = 0;
 
-    int add(std::function<void(void)> f, frametime when);
-    int add(std::function<void(void)> f, float ratio);
-    int addAbsolute(std::function<void(void)> f, frametime when);
+    int add(void (*func)(int), int arg, frametime when);
+    int add(void (*func)(int), int arg, float ratio);
+    int addAbsolute(void (*func)(int), int arg, frametime when);
     void clear();
     void cancel(int i);
     frametime confirm();
     void operator()();
     void operator++();
+    
+    static void q_test(int);
+    static void q_rec(int);
 };
 inline AudioActionQue audioActionQue;

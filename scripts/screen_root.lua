@@ -19,33 +19,46 @@ control.unitmap[n_on][control.key_stop] = function()
         end,1500,"stop_hold")
     end
 end
-control.unitmap[n_off][control.key_stop] = function()
-    system.async_cancel("stop_hold");
-end
-
 
 system.async_after(function()
-    audio.que.clip.rec(test_clip,1.0)
-    audio.que.clip.rec(test_clip2,1.5)
+    audio.que.test()
+    audio.que.test()
     audio.que.confirm()
-    audio.que.clip.rec(test_clip,2.0)
-    audio.que.clip.rec(test_clip2,4.0)
+    print(audio.que.tick())
+end,1500,"test")
+
+control.unitmap[n_on][control.key_stop] = function()
+    audio.que.clip.stop(test_clip,0.0)
     audio.que.confirm()
-end,500,"test")
+end
+
+control.unitmap[n_on][control.key_rec] = function()
+    audio.que.clip.rec(test_clip,0.0)
+    audio.que.confirm()
+end
+
+control.unitmap[n_on][control.key_play] = function()
+    audio.que.clip.play(test_clip,0.0)
+    audio.que.confirm()
+end
+
+control.unitmap[n_on][control.key_pad1] = function()
+    audio.que.rec()
+    audio.que.confirm()
+end
+
 
 prog = visuals.addVTimer()
 prog.x = 320
 prog.y = 200
 prog.w = 200
 prog.circular = false
-lbl_q_period = visuals.addVLabel("")
-lbl_q_period.x = 320
-lbl_q_period.y = 240
-lbl_q_count = visuals.addVLabel("")
-lbl_q_count.x = 320
-lbl_q_count.y = 260
 
-audio.que.period(500)
+lbl_c_state = visuals.addVLabel("")
+lbl_c_state.x = 320
+lbl_c_state.y = 260
+
+audio.que.period(2000)
 
 visuals.onFrame = function()    
     local c = test_clip
@@ -65,8 +78,7 @@ visuals.onFrame = function()
     if(c.isMerging) then bb.v_hue = visuals.HUE_PURPLE; end
     
     local t = audio.que.progress()
-    local ct = audio.que.count()
+    local ct = audio.que.tick()
     prog.progress = t
-    lbl_q_period.text = tostring(t)
-    lbl_q_count.text = tostring(ct)
+    lbl_c_state.text = tostring(ct)
 end
