@@ -91,9 +91,9 @@ struct VElement{
 			DrawLine(xx-10,y,xx+w+10,y,BLUE);	
 			
 			std::string pos;
-			pos += std::to_string(x);
+			pos += STR(x);
 			pos += ",";
-			pos += std::to_string(y);
+			pos += STR(y);
 			DrawString(pos,x,y);
 		}
         if(focus){
@@ -263,31 +263,34 @@ void lua_init()
     	auto f = LoadFont((root + name).c_str());
         fonts.push_back(f);
 	};
-    l_system["uiFont"] = [](int i){
+    l_visuals["uiFont"] = [](int i){
         if(i >= 0 and i < fonts.size()) ui_font = fonts[i];
     };
-	l_system["gridDiv"] = [](int d){
+	l_visuals["gridDiv"] = [](int d){
 		g_div = d;
 	};
-	l_system["gridW"] = []() -> int{
+	l_visuals["gridW"] = []() -> int{
 		return (S_WIDTH)/g_div;
 	};
-	l_system["gridH"] = []() -> int{
+	l_visuals["gridH"] = []() -> int{
 		return (S_HEIGHT)/g_div;
 	};
-	l_system["grid"] = [](bool state){
+	l_visuals["grid"] = [](bool state){
 		layout_grid = state;
 	};
-	l_system["actions"] = [](bool state){
+	l_visuals["actions"] = [](bool state){
 		actions_view = state;
 	};
-	l_system["bench"] = [](bool state){
+	l_visuals["bench"] = [](bool state){
 		bench_view = state;
 	};
-	l_system["chain"] = [](bool state){
+	l_visuals["chain"] = [](bool state){
 		chain_view = state;
 	};
-	l_system["midi"] = [](bool state){
+	l_visuals["aque"] = [](bool state){
+		audio_que_view = state;	
+	};
+	l_visuals["midi"] = [](bool state){
 		midi_view = state;
 	};
 	l_system["toggleAnimation"] = [](){
@@ -411,13 +414,13 @@ void lua_init()
         
         std::string s;
         s += "[";
-        s += std::to_string(w);
+        s += STR(w);
         s += "] ev:";
-        s += std::to_string(ev);
+        s += STR(ev);
         s += " n:";
-        s += std::to_string(note);
+        s += STR(note);
         s += " v:";
-        s += std::to_string(vel);
+        s += STR(vel);
         mevents.insert(mevents.begin(),s);
         if(mevents.size() > 5) mevents.pop_back();
     };
@@ -465,10 +468,10 @@ void lua_init()
     };
     
     l_audio["que"]["test"] = [](){
-        audioActionQue.add(AudioActionQue::q_test,8,0.5f);
+        audioActionQue.enque(AudioActionQue::q_test,8,0.5f);
     };
     l_audio["que"]["rec"] = [](){
-        audioActionQue.add(AudioActionQue::q_rec,0,0.f);
+        audioActionQue.enque(AudioActionQue::q_rec,0,0.f);
     };
     // l_audio["que"]["clip"]["clear"] = [](Clip* c, float r) -> int{
  //        return audioActionQue.add([=](){
@@ -900,17 +903,17 @@ void do_actions()
         
         if(actions_view) {
             auto bounds = DrawString("("
-            + std::to_string((ac->time_to_take).count())
+            + STR((ac->time_to_take).count())
             + "ms):" 
             + seq->name
             + ":"
-            + std::to_string(seq->count - seq->actions.size() + 1)
-            + "/" + std::to_string(seq->count)
+            + STR(seq->count - seq->actions.size() + 1)
+            + "/" + STR(seq->count)
                 , 0, 16*yy, 16, WHITE);
             DrawRectangle(0,16*yy++, bounds.x*seq->exec_ratio, 16,{0,255,0,64});
         }
 	 
-		//DrawString("[" + std::to_string(int(a->exec_ratio*100)) + "%] -> " + ac->name, 0, 16*yy++, 16, GRAY);
+		//DrawString("[" + STR(int(a->exec_ratio*100)) + "%] -> " + ac->name, 0, 16*yy++, 16, GRAY);
     	
         if(seq->time_current >= ac->time_to_take and seq->actions.size()){
             seq->actions.erase(seq->actions.begin());
@@ -959,13 +962,13 @@ void do_grid()
 		float gx = m.x/(float(S_WIDTH)/float(g_div));
 		float gy = m.y/(float(S_HEIGHT)/float(g_div));
 		std::string coords;
-		coords += std::to_string(gx);
+		coords += STR(gx);
 		coords += ",";
-		coords += std::to_string(gy);
+		coords += STR(gy);
 		coords += '\n';
-		coords += std::to_string(m.x);
+		coords += STR(m.x);
 		coords += ",";
-		coords += std::to_string(m.y);
+		coords += STR(m.y);
 	
 		auto b = DrawString(coords,m.x,m.y,16,GRAY,0.0,1.0);
 		DrawRectangleLines(std::floor(gx)*dx,std::floor(gy)*dy,dx,dy,YELLOW);
@@ -1067,18 +1070,32 @@ void screen()
             DrawRectangle(524,16,100.0f*ratio_frame,8,PURPLE);
             DrawRectangle(524+100.0f*ratio_frame,16,100.0f*ratio_actions,8,YELLOW);
             DrawRectangle(524+100.0f*ratio_actions,16,100.0f*ratio_elements,8,SKYBLUE);
-            DrawString("[Fps] " + std::to_string(100.0f*ratio_fps)+"%",500,32,16,GREEN);
-            DrawString("[Frm] " + std::to_string(100.0f*ratio_frame)+"%",500,48,16,PURPLE);
-            DrawString("[Act] " + std::to_string(100.0f*ratio_actions)+"%",500,64,16,YELLOW);
-            DrawString("[Elm] " + std::to_string(100.0f*ratio_elements)+"%",500,80,16,SKYBLUE);
+            DrawString("[Fps] " + STR(100.0f*ratio_fps)+"%",500,32,16,GREEN);
+            DrawString("[Frm] " + STR(100.0f*ratio_frame)+"%",500,48,16,PURPLE);
+            DrawString("[Act] " + STR(100.0f*ratio_actions)+"%",500,64,16,YELLOW);
+            DrawString("[Elm] " + STR(100.0f*ratio_elements)+"%",500,80,16,SKYBLUE);
 
             DrawRectangleLines(524,24,100.0f,8,WHITE);
             DrawRectangle(524,24,100.0f*ratio_dsp,8,RED);
-            DrawString("[DSP] " + std::to_string(100.0f*ratio_dsp)+"%",500,96,16,RED);
+            DrawString("[DSP] " + STR(100.0f*ratio_dsp)+"%",500,96,16,RED);
 
         }
 
-        if(chain_view){
+		if(audio_que_view){
+			DrawString("AQ [" + STR(audioActionQue.actions_count) + "] <- [" + STR(audioActionQue.actions_count) + "]", 0,S_HEIGHT,16,WHITE,0.0,1.0);
+			for(int i=0; i<audioActionQue.max_actions; i++){
+				std::string s = STR(i) + " > ";
+				if(audioActionQue.actions[i].pending)
+					s += "a@" + STR(audioActionQue.actions[i].offset);
+				else s += " -- ";
+				if(audioActionQue.que[i].pending)
+					s += "a@" + STR(audioActionQue.que[i].offset);
+				else s += " -- ";
+				
+				DrawString(s,0,S_HEIGHT-8 - 8*i, 16,WHITE,0.0,1.0);
+			}
+		}
+        else if(chain_view){
             int y = 0;
             int x = 0;
             for(auto s : chain){

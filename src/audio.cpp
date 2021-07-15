@@ -126,13 +126,6 @@ int audio_init(){
     test_clip.update();
 }
 
-AudioActionQue::AudioActionQue(){
-    for(int i=0; i<audioActionQue.max_actions; i++){
-        audioActionQue.actions[i].pending = false;
-        audioActionQue.actions[i].arg = 0;
-    }
-}
-
 void AudioActionQue::clear(){
 
     actions_count = 0;    
@@ -142,6 +135,61 @@ void AudioActionQue::clear(){
     }
 
 }
+
+void AudioActionQue::cancel(int i){
+	if(i<0 or i>max_actions) return;
+	actions[i].pending = false;
+	if(actions_count) actions_count--;
+}
+
+void AudioActionQue::unque(int q){
+	if(q<0 or q>max_actions) return;
+	que[q].pending = false;
+	if(que_count) que_count--;
+}
+
+int AudioActionQue::enque(void (*fp)(int), int arg, float p_r){
+    return enque(
+        fp, arg,
+        frametime{ long( float(period)*p_r ) }
+    );
+}
+int AudioActionQue::enque(void (*fp)(int), int arg, frametime w){
+
+    if(actions_count == max_actions) return -1;
+    if(que_count == max_actions) return -1;
+    
+    int q = que_count;
+    auto o = (last + w.count());
+    que[q].arg = arg;
+    que[q].action = fp;
+    que[q].offset.store(o);
+	que[q].pending = true;
+    que_count = q + 1;
+    
+    return que_count;
+}
+
+frametime AudioActionQue::confirm(){
+    if(que_count == 0) return frametime{0};
+
+    int j = 0;
+
+    for(int i=0; i<max_actions; i++){
+        if(actions[i].pending == false and que[j].pending){
+            actions[i].arg = que[j].arg;
+            actions[i].action = que[j].action;
+            actions[i].offset.store(que[j].offset.load());
+            actions[i].pending = true;
+	    	que[j].pending = false;
+            j++;
+            if(++actions_count == max_actions or --que_count == 0) break;
+        }
+    }
+    
+    return frametime{tick.load()};
+}
+
 
 void AudioActionQue::operator()(){
     
@@ -171,45 +219,6 @@ void AudioActionQue::operator++(){
     }
 }
 
-int AudioActionQue::add(void (*fp)(int), int arg, float p_r){
-    return add(
-        fp, arg,
-        frametime{ long( float(period)*p_r ) }
-    );
-}
-int AudioActionQue::add(void (*fp)(int), int arg, frametime w){
-
-    if(actions_count == max_actions) return -1;
-    if(que_count == max_actions) return -1;
-    
-    int q = que_count;
-    auto o = (last + w.count());
-    que[q].arg = arg;
-    que[q].action = fp;
-    que[q].offset.store(o);
-    que_count = q + 1;
-    
-    return que_count;
-}
-
-frametime AudioActionQue::confirm(){
-    if(que_count == 0) return frametime{0};
-
-    int j = 0;
-
-    for(int i=0; i<max_actions; i++){
-        if(actions[i].pending == false){
-            actions[i].action = que[j].action;
-            actions[i].arg = que[j].arg;
-            actions[i].offset.store(que[j].offset.load());
-            actions[i].pending = true;
-            j++;
-            if(++actions_count == max_actions or --que_count == 0) break;
-        }
-    }
-    
-    return frametime{tick.load()};
-}
 
 
 Clip::Clip(){

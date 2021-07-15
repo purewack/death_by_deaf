@@ -55,6 +55,7 @@ inline bool layout_grid = false;
 inline bool actions_view = false;
 inline bool bench_view = false;
 inline bool chain_view = false;
+inline bool audio_que_view = false;
 inline bool midi_view = false;
 inline bool in_console = false;
 inline bool reload = false;
@@ -89,6 +90,7 @@ inline std::vector<std::string> commands;
 inline std::string command;
 inline int cmd_index = 0;
 
+#define STR(X) std::to_string(X)
 #define LOG(X) std::cout << "[Info] " << X << std::endl; 
 #define ERROR(X) std::cout << "[**Error**] " << X << std::endl;
 #define IS_SHIFT_DOWN IsKeyDown(KEY_LEFT_SHIFT)
