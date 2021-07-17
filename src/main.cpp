@@ -468,10 +468,10 @@ void lua_init()
     };
     
     l_audio["que"]["test"] = [](){
-        audioActionQue.enque(AudioActionQue::q_test,8,0.5f);
+        audioActionQue.enque(0.5f, AudioActionQue::q_test, (void*)int(5));
     };
     l_audio["que"]["rec"] = [](){
-        audioActionQue.enque(AudioActionQue::q_rec,0,0.f);
+        audioActionQue.enque(0.f, AudioActionQue::q_rec);
     };
     // l_audio["que"]["clip"]["clear"] = [](Clip* c, float r) -> int{
  //        return audioActionQue.add([=](){
@@ -1082,17 +1082,17 @@ void screen()
         }
 
 		if(audio_que_view){
-			DrawString("AQ [" + STR(audioActionQue.actions_count) + "] <- [" + STR(audioActionQue.actions_count) + "]", 0,S_HEIGHT,16,WHITE,0.0,1.0);
+			DrawString("AQ [" + STR(audioActionQue.actions_count) + "] <- [" + STR(audioActionQue.actions_count) + "]", 0,S_HEIGHT-4,16,WHITE,0.0,1.0);
 			for(int i=0; i<audioActionQue.max_actions; i++){
 				std::string s = STR(i) + " > ";
 				if(audioActionQue.actions[i].pending)
-					s += "a@" + STR(audioActionQue.actions[i].offset);
+					s += audioActionQue.actions[i].name + "@" + STR(audioActionQue.actions[i].offset);
 				else s += " -- ";
 				if(audioActionQue.que[i].pending)
-					s += "a@" + STR(audioActionQue.que[i].offset);
-				else s += " -- ";
+					s += audioActionQue.que[i].name + "@" + STR(audioActionQue.que[i].offset);
+				else s += "| -- ";
 				
-				DrawString(s,0,S_HEIGHT-8 - 8*i, 16,WHITE,0.0,1.0);
+				DrawString(s,0,S_HEIGHT-16 - 8*i, 16,WHITE,0.0,1.0);
 			}
 		}
         else if(chain_view){

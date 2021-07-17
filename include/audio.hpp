@@ -90,8 +90,9 @@ inline Clip test_clip, test_clip2;
 struct AudioAction{
     std::atomic<bool> pending = false;
     std::atomic<long> offset = 0;
-    void (*action)(int);
-    int arg = 0;
+    void (*action)(void*);
+    void* action_data = nullptr;
+	std::string name = "default";
 };
 
 struct AudioActionQue {
@@ -108,16 +109,18 @@ struct AudioActionQue {
     std::atomic<int> actions_count = 0;
     std::atomic<int> que_count = 0;
 
-    int enque(void (*func)(int), int arg, frametime when);
-    int enque(void (*func)(int), int arg, float ratio);
+    int enque(frametime when, void (*func)(void*), void* arg = nullptr);
+    int enque(float ratio, void (*func)(void*), void* arg = nullptr);
     void unque(int q);
     void cancel(int i);
+	void unque(std::string with_name);
+    void cancel(std::string with_name);
     void clear();
     frametime confirm();
     void operator()();
     void operator++();
     
-    static void q_test(int);
-    static void q_rec(int);
+    static void q_test(void* data);
+    static void q_rec(void* data);
 };
 inline AudioActionQue audioActionQue;

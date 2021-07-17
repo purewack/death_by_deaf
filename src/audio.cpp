@@ -6,7 +6,6 @@ float out01;
 
 int audioProcess (jack_nframes_t nframes, void *arg)
 {
-    //std::lock_guard<std::mutex> lg(audioActionQue.p);
     
     auto t = new ScopedTimer(&bench_dsp);
 
@@ -116,15 +115,16 @@ int audio_init(){
 }
 
 
- void AudioActionQue::q_test(int i){
+void AudioActionQue::q_test(void* data){
     LOG("test");
-    LOG(i);
+    LOG((int*)data);
 }
 
- void AudioActionQue::q_rec(int i){
+void AudioActionQue::q_rec(void* data){
     clip_rec(&test_clip);
     test_clip.update();
 }
+
 
 void AudioActionQue::clear(){
 
@@ -141,6 +141,15 @@ void AudioActionQue::cancel(int i){
 	actions[i].pending = false;
 	if(actions_count) actions_count--;
 }
+void AudioActionQue::cancel(std::string with_name){
+	for(int i=0; i<max_actions; i++){
+		if(actions[i].name == with_name){		
+			actions[i].pending = false;
+			if(actions_count) actions_count--;
+			break;
+		}
+	}
+}
 
 void AudioActionQue::unque(int q){
 	if(q<0 or q>max_actions) return;
@@ -148,21 +157,34 @@ void AudioActionQue::unque(int q){
 	if(que_count) que_count--;
 }
 
-int AudioActionQue::enque(void (*fp)(int), int arg, float p_r){
+void AudioActionQue::unque(std::string with_name){
+	for(int i=0; i<max_actions; i++){
+		if(que[i].name == with_name){		
+			que[i].pending = false;
+			if(que_count) que_count--;
+			break;
+		}
+	}
+}
+
+int AudioActionQue::enque(float p_r, void (*fp)(void*), void* arg){
     return enque(
-        fp, arg,
-        frametime{ long( float(period)*p_r ) }
+		frametime{ long( float(period)*p_r )},
+        fp, arg
     );
 }
-int AudioActionQue::enque(void (*fp)(int), int arg, frametime w){
+int AudioActionQue::enque(frametime w, void (*fp)(void*), void* arg){
 
     if(actions_count == max_actions) return -1;
     if(que_count == max_actions) return -1;
     
     int q = que_count;
     auto o = (last + w.count());
-    que[q].arg = arg;
+
+	if(que[q].action_data) free(que[q].action_data);
+    que[q].action_data = arg;
     que[q].action = fp;
+
     que[q].offset.store(o);
 	que[q].pending = true;
     que_count = q + 1;
@@ -174,10 +196,9 @@ frametime AudioActionQue::confirm(){
     if(que_count == 0) return frametime{0};
 
     int j = 0;
-
     for(int i=0; i<max_actions; i++){
         if(actions[i].pending == false and que[j].pending){
-            actions[i].arg = que[j].arg;
+            actions[i].action_data = que[j].action_data;
             actions[i].action = que[j].action;
             actions[i].offset.store(que[j].offset.load());
             actions[i].pending = true;
@@ -200,7 +221,7 @@ void AudioActionQue::operator()(){
     for(int i=0; i<max_actions; i++){
         if(actions[i].pending){
             if(tick >= actions[i].offset) {
-                actions[i].action(actions[i].arg);
+                actions[i].action(actions[i].action_data);
                 actions_count--;
                 actions[i].pending = false;
             }
