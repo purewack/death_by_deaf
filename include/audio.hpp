@@ -6,7 +6,7 @@
 #include <jack/jack.h>
 #include <jack/ringbuffer.h>
 
-#define AUDIO_CLIP_SIZE 1048576 //1MB 8*1024*1024 ~ 21s @ 48kHz
+#define AUDIO_CLIP_SIZE 8388608 //8MB 8*1024*1024*4bytes ~ 43s @ 48kHz
 
 using frametime = std::chrono::duration<int64_t, std::ratio<1,48000>>;
 
@@ -51,38 +51,31 @@ public:
         stop,
         base,
         play,
-        dub,
-        merge
+        dub
     };
-    //std::atomic<State> state;
-    State state, n_state;
-    unsigned long length, n_length;
-    unsigned long head, n_head;
-    bool n_swap_data = false;
+     
+    std::atomic<State> state;
+    std::atomic<unsigned long> length;
+    std::atomic<unsigned long> head;
+    struct {
+        std::atomic<bool> refill;
+    } flags;
     
     void operator()(float* inout);
-    
     Clip();
     ~Clip();
     
     void clear();
-    void update();
-    void setOnSample(std::function<void(void)> a);
-    void setOnLoop(std::function<void(void)> a);
-    void merge();
+    void refill();
     void undo();
+    void swapStreams();
 private:
-    float *_aData, *_bData, *_cData, *_data;
-    
-    std::function<void(void)> _onSample;
-    std::function<void(void)> _onLoop;
-    
+    float *_aData, *_bData, *_data, *_ndata;
     unsigned int _undo_level;
 };
     
 void clip_stop(Clip* c);
-void clip_rec(Clip* c);
-void clip_play(Clip* c);
+void clip_launch(Clip* c);
 
 inline Clip test_clip, test_clip2;
 
@@ -90,8 +83,7 @@ inline Clip test_clip, test_clip2;
 struct AudioAction{
     std::atomic<bool> pending = false;
     std::atomic<long> offset = 0;
-    void (*action)(void*);
-    void* action_data = nullptr;
+    void (*action)(void);
 	std::string name = "default";
 };
 
@@ -109,8 +101,8 @@ struct AudioActionQue {
     std::atomic<int> actions_count = 0;
     std::atomic<int> que_count = 0;
 
-    int enque(frametime when, void (*func)(void*), void* arg = nullptr);
-    int enque(float ratio, void (*func)(void*), void* arg = nullptr);
+    int enque(frametime when, void (*func)(void));
+    int enque(float ratio, void (*func)(void));
     void unque(int q);
     void cancel(int i);
 	void unque(std::string with_name);
@@ -120,7 +112,8 @@ struct AudioActionQue {
     void operator()();
     void operator++();
     
-    static void q_test(void* data);
-    static void q_rec(void* data);
+    static void q_test();
+    static void q_launch();
+    static void q_stop();
 };
 inline AudioActionQue audioActionQue;

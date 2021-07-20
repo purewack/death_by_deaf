@@ -62,7 +62,7 @@ int audio_init(){
 
     const char **ports;
     jack_set_process_callback (client, audioProcess, 0);
-    //jack_on_shutdown (client, jackEnd, 0);
+    //jack_oshutdown (client, jackEnd, 0);
     /* create three ports */
 
     input_portl = jack_port_register (client, "inputA",
@@ -115,17 +115,6 @@ int audio_init(){
 }
 
 
-void AudioActionQue::q_test(void* data){
-    LOG("test");
-    LOG((int*)data);
-}
-
-void AudioActionQue::q_rec(void* data){
-    clip_rec(&test_clip);
-    test_clip.update();
-}
-
-
 void AudioActionQue::clear(){
 
     actions_count = 0;    
@@ -167,13 +156,10 @@ void AudioActionQue::unque(std::string with_name){
 	}
 }
 
-int AudioActionQue::enque(float p_r, void (*fp)(void*), void* arg){
-    return enque(
-		frametime{ long( float(period)*p_r )},
-        fp, arg
-    );
+int AudioActionQue::enque(float p_r, void (*fp)(void)){
+    return enque(frametime{ long( float(period)*p_r )},fp);
 }
-int AudioActionQue::enque(frametime w, void (*fp)(void*), void* arg){
+int AudioActionQue::enque(frametime w, void (*fp)(void)){
 
     if(actions_count == max_actions) return -1;
     if(que_count == max_actions) return -1;
@@ -181,8 +167,6 @@ int AudioActionQue::enque(frametime w, void (*fp)(void*), void* arg){
     int q = que_count;
     auto o = (last + w.count());
 
-	if(que[q].action_data) free(que[q].action_data);
-    que[q].action_data = arg;
     que[q].action = fp;
 
     que[q].offset.store(o);
@@ -198,7 +182,6 @@ frametime AudioActionQue::confirm(){
     int j = 0;
     for(int i=0; i<max_actions; i++){
         if(actions[i].pending == false and que[j].pending){
-            actions[i].action_data = que[j].action_data;
             actions[i].action = que[j].action;
             actions[i].offset.store(que[j].offset.load());
             actions[i].pending = true;
@@ -221,7 +204,7 @@ void AudioActionQue::operator()(){
     for(int i=0; i<max_actions; i++){
         if(actions[i].pending){
             if(tick >= actions[i].offset) {
-                actions[i].action(actions[i].action_data);
+                actions[i].action();
                 actions_count--;
                 actions[i].pending = false;
             }
@@ -245,15 +228,13 @@ void AudioActionQue::operator++(){
 Clip::Clip(){
     id = (unsigned long)this;
 	_aData  =  (float*)calloc(AUDIO_CLIP_SIZE,sizeof(float));
-	_bData  =  (float*)calloc(AUDIO_CLIP_SIZE,sizeof(float)); 
-	_cData  =  (float*)calloc(AUDIO_CLIP_SIZE,sizeof(float)); 
+	_bData  =  (float*)calloc(AUDIO_CLIP_SIZE,sizeof(float));  
     clear();
 }
 
 Clip::~Clip(){
     free(_aData);
     free(_bData);
-    free(_cData);
 }
 
 
@@ -266,10 +247,9 @@ void Clip::operator()(float* inout){
         break;
 
         case State::base:
+            if(length >= AUDIO_CLIP_SIZE) return;
             _aData[head] = _bData[head] = *inout;
-            if(length < AUDIO_CLIP_SIZE) {
-                length++;
-            }
+            length++;
         break;
 
         case State::play:
@@ -277,12 +257,10 @@ void Clip::operator()(float* inout){
         break;
 
         case State::dub:
-            _cData[head] += *inout;
-            *inout = _data[head] + _cData[head];
-        break;
-
-        case State::merge:
-            *inout = _data[head] + _cData[head];
+            if(flags.refill == false)
+            _data[head] += *inout;
+            
+            *inout = _data[head];
         break;
     }
 
@@ -293,58 +271,39 @@ void Clip::operator()(float* inout){
 
 }
 
-
-void Clip::clear(){
-    n_state = State::clear;
-    n_length = 0;
-    n_head = 0;
-    _data = _aData;
+void Clip::swapStreams(){
+    if(_data == _aData) {
+        _data = _bData;
+        _ndata = _aData;
+    }
+    else {
+        _data = _aData;
+        _ndata = _bData;
+    }
 }
 
-void Clip::update(){
-    if(n_swap_data){
-        if(_data == _aData)
-            _data = _bData;
-        else
-            _data = _aData;
-
-    }
-    if(n_head) head = n_head;
-    if(n_length) length = n_length;
-    if(n_state != State::none) state = n_state;
-
-    n_swap_data = false;
-    n_head = 0;
-    n_length = 0;
-    n_state = State::none;
-}
-
-void Clip::merge(){
-    float *destData, *srcData, *dubData;
-    if(_data == _aData){
-        destData = _bData;
-        srcData = _aData;
-    }
-    else{
-        destData = _aData;
-        srcData = _aData;
-    }
-    dubData = _cData;
+void Clip::refill(){
 
     for(unsigned long i=0; i<length; i++){
-        destData[i] = srcData[i] + dubData[i];
-        srcData[i] = destData[i];
-        dubData[i] = 0;
+        _ndata[i] = _data[i];
     }
 
     _undo_level++;
 }
 
+void Clip::clear(){
+    state = State::clear;
+    length = 0;
+    head = 0;
+    _data = _aData;
+    _ndata = _bData;
+}
+
 void clip_stop(Clip* c){
     switch(c->state){
         case Clip::State::play:
-            c->n_state = Clip::State::stop;
-            c->n_head = 0;
+            c->state = Clip::State::stop;
+            c->head = 0;
         break;
 
         case Clip::State::base:
@@ -352,56 +311,61 @@ void clip_stop(Clip* c){
         break;
 
         case Clip::State::dub:
-            c->n_state = Clip::State::play;
+            c->state = Clip::State::play;
+            c->swapStreams();
+            c->flags.refill = true;
         break;
     }
 }
 
-void clip_rec(Clip* c){
+void clip_launch(Clip* c){
     switch(c->state){
         case Clip::State::clear:
-            c->n_state = Clip::State::base;
+            c->state = Clip::State::base;
         break;
 
         case Clip::State::stop:
-            c->n_state = Clip::State::dub;
+            c->state = Clip::State::dub;
         break;
 
         case Clip::State::play:
-            c->n_state = Clip::State::dub;
+            c->state = Clip::State::dub;
+            c->swapStreams();
         break;
 
         case Clip::State::dub:
-            c->n_state = Clip::State::merge;
+            c->flags.refill = true;
+            c->state = Clip::State::play;
         break;
 
         case Clip::State::base:
-            c->n_head = 0;
-            c->n_state = Clip::State::play;
+            c->head = 0;
+            c->state = Clip::State::play;
         break;
     }
 }
 
-void clip_play(Clip* c){
-    switch(c->state){
-        case Clip::State::stop:
-            c->n_head = 0;
-            c->n_state = Clip::State::play;
-        break;
-    }
-}
 
 void audio_supervisor(){
-    // Clip* clips[2];
- //    clips[0] = &test_clip;
- //    clips[1] = &test_clip2;
- //
- //    for(int i=0; i<2; i++){
- //        if(clips[i]->state == Clip::State::merge){
- //            clips[i]->merge();
- //            clips[i]->n_swap_data = true;
- //            clips[i]->n_state = Clip::State::play;
- //            clips[i]->update();
- //        }
- //    }
+    Clip* clips[2];
+    clips[0] = &test_clip;
+    clips[1] = &test_clip2;
+
+    for(int i=0; i<2; i++){
+        if(clips[i]->flags.refill){
+            clips[i]->refill();
+            clips[i]->flags.refill = false;
+        }
+    }
+}
+
+void AudioActionQue::q_test(){
+    LOG("test");
+}
+
+void AudioActionQue::q_launch(){
+    clip_launch(&test_clip);
+}
+void AudioActionQue::q_stop(){
+    clip_stop(&test_clip);
 }

@@ -28,22 +28,17 @@ system.async_after(function()
 end,1500,"test")
 
 control.unitmap[n_on][control.key_stop] = function()
-    audio.que.clip.stop(test_clip,0.0)
+    audio.que.stop(test_clip,0.0)
     audio.que.confirm()
 end
 
 control.unitmap[n_on][control.key_rec] = function()
-    audio.que.clip.rec(test_clip,0.0)
-    audio.que.confirm()
-end
-
-control.unitmap[n_on][control.key_play] = function()
-    audio.que.clip.play(test_clip,0.0)
+    audio.que.launch(test_clip,0.0)
     audio.que.confirm()
 end
 
 control.unitmap[n_on][control.key_pad1] = function()
-    audio.que.rec()
+    audio.que.launch(test_clip,0.0)
     audio.que.confirm()
 end
 

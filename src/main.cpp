@@ -468,10 +468,13 @@ void lua_init()
     };
     
     l_audio["que"]["test"] = [](){
-        audioActionQue.enque(0.5f, AudioActionQue::q_test, (void*)int(5));
+        audioActionQue.enque(0.5f, AudioActionQue::q_test);
     };
-    l_audio["que"]["rec"] = [](){
-        audioActionQue.enque(0.f, AudioActionQue::q_rec);
+    l_audio["que"]["stop"] = [](){
+        audioActionQue.enque(0.f, AudioActionQue::q_stop);
+    };
+    l_audio["que"]["launch"] = [](){
+        audioActionQue.enque(0.f, AudioActionQue::q_launch);
     };
     // l_audio["que"]["clip"]["clear"] = [](Clip* c, float r) -> int{
  //        return audioActionQue.add([=](){
@@ -509,7 +512,6 @@ void lua_init()
     l_audio["constants"]["clip"]["states"]["base"]  = 2;
     l_audio["constants"]["clip"]["states"]["play"]  = 3;
     l_audio["constants"]["clip"]["states"]["dub"]   = 4;
-    l_audio["constants"]["clip"]["states"]["merge"]   = 5;
     clip["isClear"] = sol::property([](Clip* c){
         return (c->state == Clip::State::clear);
     });
@@ -517,13 +519,13 @@ void lua_init()
         return (c->state == Clip::State::stop);
     });
     clip["isRecording"] = sol::property([](Clip* c){
-        return (c->state == Clip::State::base or c->state == Clip::State::dub or c->state == Clip::State::merge);
+        return (c->state == Clip::State::base or c->state == Clip::State::dub);
     });
     clip["isDubbing"] = sol::property([](Clip* c){
         return (c->state == Clip::State::dub);
     });
     clip["isMerging"] = sol::property([](Clip* c){
-        return (c->state == Clip::State::merge);
+        return (c->flags.refill.load() == true);
     });
     clip["isPlaying"] = sol::property([](Clip* c){
         return (c->state == Clip::State::play or c->state == Clip::State::dub);
