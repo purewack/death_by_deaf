@@ -1,5 +1,7 @@
 TARGET := MAC
 
+SRCS := src/main.cpp src/audio.cpp src/calls.cpp
+
 IFLAGS := -ggdb --std=c++17 -Wno-narrowing -Wno-switch
 IFLAGS += -Iinclude -I/usr/local/include -I/usr/local/include/lua
 LFLAGS := -L/usr/local/lib -L/usr/lib
@@ -19,6 +21,6 @@ LFLAGS += -ldl -lGL -lX11 -lrt -lbrcmGLESv2 -lbrcmEGL -lbcm_host
 endif
 
 all:
-	g++ $(IFLAGS) src/main.cpp src/audio.cpp $(LFLAGS) -o lua_motif
+	g++ $(IFLAGS) $(SRCS) $(LFLAGS) -o lua_motif
 run:
 	./lua_motif
