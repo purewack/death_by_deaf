@@ -5,6 +5,23 @@ Re-imagined  M O T I F backend powered by Lua
 Core audio stuff in C++ 🔊
 Slower functions and UI in lua 🌖
 
+
+
+
+
+### Electron implementation in consideration
+
+REQUIRED IMMEDIATELY
+- Fix relative paths for scripts and gfx if and when prog name changes
+- Migrate to CMake
+- Clean up files and separate out to app.cpp
+
+
+
+
+
+
+
 Done so far ✅
 - Lua is embedded into system
 - Scripts act as screens, no more complex hard coded UIs
