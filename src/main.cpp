@@ -1,18 +1,6 @@
 #include "types.hpp"
+#include <regex>
 
-void makeRoot(const char* argv){
-	auto name = std::string("lua_motif");
-	
-	char* p = (char*)malloc(sizeof(char)*1024); 
-	getcwd(p,1024);
-	root = std::string(p) + "/";
-	std::string arg0 = "";
-	arg0 += std::string(argv);
-	arg0 = arg0.substr(0,arg0.size()-name.size());
-	
-	if(arg0[0] == '/') root = "";
-	root += arg0;
-}
 
 void execCommand(){
 	try{
@@ -250,8 +238,7 @@ void lua_init()
 	lua["S_W"] = S_WIDTH;
 	lua["S_H"] = S_HEIGHT;
 	lua["S_HT"] = S_HEIGHT_T;
-	lua["root"] = root;
-	lua.require_file("json",root + "scripts/json.lua");
+	lua.require_file("json","scripts/json.lua");
 	
     auto l_system = lua["system"].get_or_create<sol::table>();
     auto l_visuals = lua["visuals"].get_or_create<sol::table>();
@@ -260,7 +247,7 @@ void lua_init()
     auto l_sesh = lua["sesh"].get_or_create<sol::table>();
     
 	l_system["loadFont"] = [](std::string name){
-    	auto f = LoadFont((root + name).c_str());
+    	auto f = LoadFont((name).c_str());
         fonts.push_back(f);
 	};
     l_visuals["uiFont"] = [](int i){
@@ -611,7 +598,7 @@ void lua_init()
     
     
 	l_visuals["createTexture"] = [](std::string t) -> Texture2D {
-		auto tex = LoadTexture((root+t).c_str());
+		auto tex = LoadTexture((t).c_str());
 		textures_in_script.push_back(tex);
 		return tex;
 	};
@@ -833,7 +820,7 @@ void lua_init()
 		reload = true;
 	};
 
-	lua.script_file(root + "scripts/_init.lua");
+	lua.script_file("scripts/_init.lua");
 };
 
 void script(){
@@ -852,7 +839,7 @@ void script(){
     
 	//load screen script
 	try{		
-		auto sc = lua.load_file(root + chain.back());
+		auto sc = lua.load_file(chain.back());
 		auto result = sc();
 		script_error = not result.valid();
 		if (result.valid()) {
@@ -1226,26 +1213,24 @@ void init()
 {
 	current_script = "scripts/screen_root.lua";
 	chain.push_back(current_script);
-	
-	InitWindow(S_WIDTH,S_HEIGHT_T,"M O T I F (luatif)");
-	SetTargetFPS(30);
 	commands.push_back("");
 	command = "";
 	
+	InitWindow(S_WIDTH,S_HEIGHT_T,"M O T I F  AUDIO (luatif)");
+	SetTargetFPS(30);
+	
 	lua_init();
 	script();
-
-    LOG("audio init status:");
-    LOG(audio_init());
 }
 
 
 int main(int argc, char* argv[]) 
 {
 	
-    makeRoot(argv[0]);
-
     init();
+    LOG("audio init status:");
+    LOG(audio_init());
+
     static std::atomic_bool running = true;
     std::thread thread_input([=](){
         while(running){

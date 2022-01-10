@@ -13,7 +13,6 @@
 #include <atomic>
 #include "audio.hpp"
 
-inline std::string root;
 inline std::string sesh;
 
 #define S_WIDTH 640

@@ -21,6 +21,6 @@ LFLAGS += -ldl -lGL -lX11 -lrt -lbrcmGLESv2 -lbrcmEGL -lbcm_host
 endif
 
 all:
-	g++ $(IFLAGS) $(SRCS) $(LFLAGS) -o lua_motif
+	g++ $(IFLAGS) $(SRCS) $(LFLAGS) -o ./bin/lua_motif
 run:
-	./lua_motif
+	./bin/lua_motif
