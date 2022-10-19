@@ -6,22 +6,25 @@
 #include "sol.hpp"
 #include "raylib.h"
 // Two-channel sawtooth wave generator.
-int saw( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
+int rtaudio_process( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
          double streamTime, RtAudioStreamStatus status, void *userData )
 {
-  unsigned int i, j;
-  double *buffer = (double *) outputBuffer;
-  double *lastValues = (double *) userData;
-  if ( status )
-    std::cout << "Stream underflow detected!" << std::endl;
-  // Write interleaved audio data.
-  for ( i=0; i<nBufferFrames; i++ ) {
-    for ( j=0; j<2; j++ ) {
-      *buffer++ = lastValues[j];
-      lastValues[j] += 0.005 * (j+1+(j*0.1));
-      if ( lastValues[j] >= 1.0 ) lastValues[j] -= 2.0;
-    }
-  }
+//   unsigned int i, j;
+//   double *buffer = (double *) outputBuffer;
+//   double *lastValues = (double *) userData;
+//   if ( status )
+//     std::cout << "Stream underflow detected!" << std::endl;
+//   // Write interleaved audio data.
+//   for ( i=0; i<nBufferFrames; i++ ) {
+//     for ( j=0; j<2; j++ ) {
+//       *buffer++ = lastValues[j];
+//       lastValues[j] += 0.005 * (j+1+(j*0.1));
+//       if ( lastValues[j] >= 1.0 ) lastValues[j] -= 2.0;
+//     }
+//   }
+   float *out_buffer = (float *) outputBuffer;
+   float *in_buffer = (float *) inputBuffer;
+    libpd_process_float(4,in_buffer,out_buffer);
   return 0;
 }
 
@@ -34,6 +37,13 @@ int main(){
     std::cout << "libpd" << std::endl;
         libpd_set_printhook(pdprint);
         libpd_init();
+        libpd_init_audio(0, 2, 44100);
+        libpd_start_message(1); // one entry in list
+        libpd_add_float(1.0f);
+        libpd_finish_message("pd", "dsp");
+        // open patch       [; pd open file folder(
+        if (!libpd_openfile("wiggle.pd","."))
+            return -1;
 
     std::cout << "rtaudio" << std::endl;
         RtAudio dac;
@@ -49,8 +59,8 @@ int main(){
         unsigned int bufferFrames = 256; // 256 sample frames
         double data[2] = {0, 0};
         try {
-            dac.openStream( &parameters, NULL, RTAUDIO_FLOAT64,
-                            sampleRate, &bufferFrames, &saw, (void *)&data );
+            dac.openStream( &parameters, NULL, RTAUDIO_FLOAT32,
+                            sampleRate, &bufferFrames, &rtaudio_process, NULL );
             dac.startStream();
         }
         catch ( RtAudioError& e ) {
