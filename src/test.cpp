@@ -3,6 +3,7 @@
 #include "z_libpd.h"
 #include "RtAudio.h"
 #include "sol.hpp"
+#include "raylib.h"
 
 void pdprint(const char *s) {
     printf("%s", s);
@@ -21,5 +22,18 @@ int main(){
     sol::state lua;
 	lua.open_libraries(sol::lib::base, sol::lib::package);
     lua.script("print(\"hello sol2\")");
+
+    InitWindow(800, 450, "raylib [core] example - basic window");
+
+    while (!WindowShouldClose())
+    {
+        BeginDrawing();
+            ClearBackground(RAYWHITE);
+            DrawText("raylib", 190, 200, 20, LIGHTGRAY);
+        EndDrawing();
+    }
+
+    CloseWindow();
+
     return 0;
 }
