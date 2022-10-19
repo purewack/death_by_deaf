@@ -1,0 +1,3 @@
+#! /bin/bash
+
+cmake -DRTAUDIO_API_CORE=ON -DRTAUDIO_API_PULSE=OFF -DRTAUDIO_API_JACK=OFF -S . -B build
