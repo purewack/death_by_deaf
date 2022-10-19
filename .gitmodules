@@ -7,3 +7,6 @@
 [submodule "deps/sol2"]
 	path = deps/sol2
 	url = https://github.com/ThePhD/sol2.git
+[submodule "deps/raylib"]
+	path = deps/raylib
+	url = https://github.com/raysan5/raylib.git
