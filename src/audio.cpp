@@ -4,22 +4,26 @@ float in01,in0,in1,pin0,pin1;
 float out01;
 
 
-int audioProcess (jack_nframes_t nframes, void *arg)
-{
-    
-    auto t = new ScopedTimer(&bench_dsp);
 
-    inl = (float*)jack_port_get_buffer(input_portl, nframes);
-    inr = (float*)jack_port_get_buffer(input_portr, nframes);
-    outl = (float*)jack_port_get_buffer(output_portl, nframes);
-    outr = (float*)jack_port_get_buffer(output_portr, nframes);
+int process ( void *out_b, void *in_b, unsigned int nBufferFrames,
+           double streamTime, RtAudioStreamStatus status, void *data )
+{ 	
+	float* in_lr = (float*)in_b;
+	float* out_lr = (float*)out_b;
+	
+    auto t = new ScopedTimer(&bench_dsp);
+    //
+    // inl = (float*)jack_port_get_buffer(input_portl, nframes);
+    // inr = (float*)jack_port_get_buffer(input_portr, nframes);
+    // outl = (float*)jack_port_get_buffer(output_portl, nframes);
+    // outr = (float*)jack_port_get_buffer(output_portr, nframes);
 
     audioActionQue();
-    for(int i=0; i<nframes; i++){
-        float spl0 = inl[i];
-        test_clip(&spl0);
-        test_clip2(&spl0);
-        outl[i] = spl0;
+    for(int i=0; i<nBufferFrames; i++){
+        // float spl0 = inl[i];
+        // test_clip(&spl0);
+      //   test_clip2(&spl0);
+        // outl[i] = spl0;
     }
     ++audioActionQue;
 
@@ -30,87 +34,41 @@ int audioProcess (jack_nframes_t nframes, void *arg)
 
 void audio_end()
 {
-    jack_client_close (client);
+	if ( hw_audio.isStreamOpen() ) hw_audio.closeStream();
 }
 int audio_init(){
+  if ( hw_audio.getDeviceCount() < 1 ) {
+  		return -1;
+  	}
+  	RtAudio::StreamParameters iParams, oParams;
+  	iParams.deviceId = hw_audio.getDefaultInputDevice(); // first available device
+  	iParams.nChannels = 2;
     
+  	oParams.deviceId = hw_audio.getDefaultOutputDevice(); // first available device
+  	oParams.nChannels = 2;
+    oParams.firstChannel = 0;
     
-    client = jack_client_open("motif",JackNoStartServer,&status,NULL);
-    if (client == NULL) {
-        fprintf (stderr, "jack_client_open() failed, "
-            "status = 0x%2.0x\n", status);
-        if (status & JackServerFailed) {
-            fprintf (stderr, "Unable to connect to JACK server\n");
-        }
-        return -1;
-    }
-    if (status & JackNameNotUnique) {
-        jack_get_client_name(client);
-        fprintf (stderr, "unique name assigned\n");
-    }
-
-    float bufs = jack_get_buffer_size(client);
-    float srate = jack_get_sample_rate(client);
-    float time_avail = bufs/srate;
-    time_avail *= 1000.f; //milli
-    time_avail *= 1000.f; //micro
-    time_avail *= 1000.f; //nano
-    int t = int(time_avail);
-    max_dsp = std::chrono::nanoseconds{t};
-
-    /////////
-
-    const char **ports;
-    jack_set_process_callback (client, audioProcess, 0);
-    //jack_oshutdown (client, jackEnd, 0);
-    /* create three ports */
-
-    input_portl = jack_port_register (client, "inputA",
-                     JACK_DEFAULT_AUDIO_TYPE,
-                     JackPortIsInput, 0);
-    input_portr = jack_port_register (client, "inputB",
-                     JACK_DEFAULT_AUDIO_TYPE,
-                     JackPortIsInput, 0);
-    output_portl = jack_port_register (client, "outputA",
-                      JACK_DEFAULT_AUDIO_TYPE,
-                      JackPortIsOutput, 0);
-    output_portr = jack_port_register (client, "outputB",
-                      JACK_DEFAULT_AUDIO_TYPE,
-                      JackPortIsOutput, 0);
-
-
-    if (jack_activate (client)) {
-        fprintf (stderr, "cannot activate client");
-        return -2;
-    }
-    ports = jack_get_ports (client, NULL, NULL,
-                JackPortIsPhysical|JackPortIsOutput);
-    if (ports == NULL) {
-        fprintf(stderr, "no physical capture ports\n");
-        return -3;
-    }
-    if (jack_connect (client, ports[0], jack_port_name (input_portl))) {
-        fprintf (stderr, "cannot connect input ports\n");
-    }
-    if (jack_connect (client, ports[1], jack_port_name (input_portr))) {
-        fprintf (stderr, "cannot connect input ports\n");
-    }
-    free (ports);
-    ports = jack_get_ports (client, NULL, NULL,
-                JackPortIsPhysical|JackPortIsInput);
-    if (ports == NULL) {
-        fprintf(stderr, "no physical playback ports\n");
-        return -4;
-    }
-
-    if (jack_connect (client, jack_port_name (output_portl), ports[0])) {
-        fprintf (stderr, "cannot connect output ports\n");
-    }
-    if (jack_connect (client, jack_port_name (output_portr), ports[1])) {
-        fprintf (stderr, "cannot connect output ports\n");
-    }
-
-    free (ports);
+  	RtAudio::StreamOptions oStream;
+  	oStream.flags = 0;//RTAUDIO_SCHEDULE_REALTIME | RTAUDIO_HOG_DEVICE;
+  	oStream.priority = 90;
+    unsigned int buf_size = 256;
+    
+  	try {
+  		hw_audio.openStream( &oParams, &iParams, RTAUDIO_FLOAT32, 48000, &buf_size, &process, &oStream);
+  	}
+  	catch ( RtAudioError& e ) {
+      e.printMessage();
+  		return -1;
+  	}
+  	try {
+  		hw_audio.startStream();
+      max_dsp = std::chrono::duration_cast<std::chrono::nanoseconds>(frametime{1});
+  	}
+  	catch ( RtAudioError& e ) {
+      e.printMessage();
+  		return -1;
+  	}
+    
    return 0;
 }
 

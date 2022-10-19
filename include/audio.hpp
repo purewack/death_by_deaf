@@ -3,12 +3,10 @@
 #include <atomic>
 #include <rtmidi/RtMidi.h>
 #include <rtaudio/RtAudio.h>
-#include <jack/jack.h>
-#include <jack/ringbuffer.h>
 
 #define AUDIO_CLIP_SIZE 8388608 //8MB 8*1024*1024*4bytes ~ 43s @ 48kHz
 
-using frametime = std::chrono::duration<int64_t, std::ratio<1,48000>>;
+using frametime = std::chrono::duration<int64_t, std::ratio<64,48000>>;
 
 enum MidiBytes: int{
 	on = 144, //x90
@@ -21,18 +19,12 @@ inline RtMidiIn scanner;
 inline int devicesCount = 0;
 inline std::vector<RtMidiIn*> devices;
 
-inline jack_options_t options = JackNoStartServer;
-inline jack_status_t status;
-inline jack_port_t *input_portl;
-inline jack_port_t *input_portr;
-inline jack_port_t *output_portl;
-inline jack_port_t *output_portr;
-inline jack_client_t *client;
-inline jack_default_audio_sample_t *inl, *inr, *outl, *outr;
- 
+inline RtAudio hw_audio;
+
 void audio_end();
 int audio_init();
-int audioProcess (jack_nframes_t nframes, void *arg);
+int audioProcess (void *out_b, void *in_b, unsigned int nBufferFrames,
+           double streamTime, RtAudioStreamStatus status, void *data );
 void audio_supervisor();
 
 struct AudioAction;
