@@ -7,9 +7,10 @@
 #if defined(_WIN32)           
 	#define NOGDI             // All GDI defines and routines
 	#define NOUSER            // All USER defines and routines
+    // Type required before windows.h inclusion
+    typedef struct tagMSG *LPMSG;
 #endif
-// Type required before windows.h inclusion
-typedef struct tagMSG *LPMSG;
+
 #include "RtAudio.h"
 
 #if defined(_WIN32)           // raylib uses these names as function parameters
