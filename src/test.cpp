@@ -34,26 +34,26 @@ int rtaudio_process( void *outputBuffer, void *inputBuffer, unsigned int nBuffer
 }
 
 void pdprint(const char *s) {
-    printf("%s", s);
+	printf("%s", s);
 }
 int main(){
-    std::cout << "test CMAKE" << std::endl;
+std::cout << "test CMAKE" << std::endl;
 
-    std::cout << "[script]" << std::endl;
-        sol::state lua;
-        lua.open_libraries(sol::lib::base, sol::lib::package);
-        lua.script("print(\"[sol2]hello sol2\")");
+std::cout << "[script]" << std::endl;
+	sol::state lua;
+	lua.open_libraries(sol::lib::base, sol::lib::package);
+	lua.script_file("scripts/main.lua");
 
-    std::cout << "[audio]" << std::endl;
-        std::cout << "libpd" << std::endl;
+
+std::cout << "[audio]" << std::endl;
+	std::cout << "libpd" << std::endl;
         libpd_set_printhook(pdprint);
         libpd_init();
         libpd_init_audio(0, 2, 44100);
-        libpd_start_message(1); // one entry in list
+        libpd_start_message(1); 
         libpd_add_float(1.0f);
         libpd_finish_message("pd", "dsp");
-        // open patch       [; pd open file folder(
-        if (!libpd_openfile("wiggle.pd","."))
+        if (!libpd_openfile("main.pd","./sound"))
             return -1;
         
         RtAudio dac;
@@ -65,19 +65,20 @@ int main(){
         parameters.nChannels = 2;
         parameters.firstChannel = 0;
         unsigned int sampleRate = 44100;
-        unsigned int bufferFrames = 256; // 256 sample frames
+        unsigned int bufferFrames = 256; 
         double data[2] = {0,0};
         try {
             dac.openStream( &parameters, NULL, RTAUDIO_FLOAT32,
                             sampleRate, &bufferFrames, &rtaudio_process, NULL );
             dac.startStream();
-            std::cout << "rtaudio start" << std::endl;
+  std::cout << "rtaudio start" << std::endl;
         }
         catch ( RtAudioError& e ) {
             e.printMessage();
-            throw std::runtime_error("\nRTError\n"); 
+	    return -1;
         } 
     
+	SetTraceLogLevel(LOG_ERROR);
     std::cout << "[gfx]" << std::endl;
         InitWindow(800, 450, "raylib [core] example - basic window");
 
@@ -95,11 +96,10 @@ int main(){
         CloseWindow();
 
 
-    std::cout << "audio" << std::endl;
+   std::cout << "audio" << std::endl;
         try {
-            // Stop the stream
             dac.stopStream();
-            std::cout << "rtaudio end" << std::endl;
+   		std::cout << "rtaudio end" << std::endl;
         }
         catch (RtAudioError& e) {
             e.printMessage();
