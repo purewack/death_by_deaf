@@ -1,27 +1,31 @@
 #include <stdio.h>
 #include <iostream>
 #include <cstdlib>
-#include "z_libpd.h"
-#include "RtAudio.h"
-#include "sol.hpp"
 #include "raylib.h"
-// Two-channel sawtooth wave generator.
+#include "z_libpd.h"
+
+#if defined(_WIN32)           
+	#define NOGDI             // All GDI defines and routines
+	#define NOUSER            // All USER defines and routines
+#endif
+// Type required before windows.h inclusion
+typedef struct tagMSG *LPMSG;
+#include "RtAudio.h"
+
+#if defined(_WIN32)           // raylib uses these names as function parameters
+	#undef near
+	#undef far
+#endif
+
+#if defined(_WIN32)  
+#include <stdexcept>
+#include <limits>
+#endif
+#include "sol.hpp" 
+
 int rtaudio_process( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
          double streamTime, RtAudioStreamStatus status, void *userData )
 {
-//   unsigned int i, j;
-//   double *buffer = (double *) outputBuffer;
-//   double *lastValues = (double *) userData;
-//   if ( status )
-//     std::cout << "Stream underflow detected!" << std::endl;
-//   // Write interleaved audio data.
-//   for ( i=0; i<nBufferFrames; i++ ) {
-//     for ( j=0; j<2; j++ ) {
-//       *buffer++ = lastValues[j];
-//       lastValues[j] += 0.005 * (j+1+(j*0.1));
-//       if ( lastValues[j] >= 1.0 ) lastValues[j] -= 2.0;
-//     }
-//   }
    float *out_buffer = (float *) outputBuffer;
    float *in_buffer = (float *) inputBuffer;
     libpd_process_float(4,in_buffer,out_buffer);
@@ -34,7 +38,13 @@ void pdprint(const char *s) {
 int main(){
     std::cout << "test CMAKE" << std::endl;
 
-    std::cout << "libpd" << std::endl;
+    std::cout << "[script]" << std::endl;
+        sol::state lua;
+        lua.open_libraries(sol::lib::base, sol::lib::package);
+        lua.script("print(\"[sol2]hello sol2\")");
+
+    std::cout << "[audio]" << std::endl;
+        std::cout << "libpd" << std::endl;
         libpd_set_printhook(pdprint);
         libpd_init();
         libpd_init_audio(0, 2, 44100);
@@ -44,57 +54,55 @@ int main(){
         // open patch       [; pd open file folder(
         if (!libpd_openfile("wiggle.pd","."))
             return -1;
-
-    std::cout << "rtaudio" << std::endl;
+        
         RtAudio dac;
-        if ( dac.getDeviceCount() < 1 ) {
-            std::cout << "\nNo audio devices found!\n";
-            exit( 0 );
-        }
+        if ( dac.getDeviceCount() < 1 ) 
+            return -1;
+        
         RtAudio::StreamParameters parameters;
         parameters.deviceId = dac.getDefaultOutputDevice();
         parameters.nChannels = 2;
         parameters.firstChannel = 0;
         unsigned int sampleRate = 44100;
         unsigned int bufferFrames = 256; // 256 sample frames
-        double data[2] = {0, 0};
+        double data[2] = {0,0};
         try {
             dac.openStream( &parameters, NULL, RTAUDIO_FLOAT32,
                             sampleRate, &bufferFrames, &rtaudio_process, NULL );
             dac.startStream();
+            std::cout << "rtaudio start" << std::endl;
         }
         catch ( RtAudioError& e ) {
             e.printMessage();
-            exit( 0 );
-        }
-        
-
-
-    std::cout << "sol2" << std::endl;
-        sol::state lua;
-        lua.open_libraries(sol::lib::base, sol::lib::package);
-        lua.script("print(\"hello sol2\")");
-
-    //raylib
+            throw std::runtime_error("\nRTError\n"); 
+        } 
+    
+    std::cout << "[gfx]" << std::endl;
         InitWindow(800, 450, "raylib [core] example - basic window");
 
+        double dd = 0;
         while (!WindowShouldClose())
         {
             BeginDrawing();
-                ClearBackground(RAYWHITE);
-                DrawText("raylib", 190, 200, 20, LIGHTGRAY);
+                ClearBackground(BLACK);
+                DrawText("DEAF", int(dd), int(dd), 20, WHITE);
+                dd += 0.1;
+                if (dd > 255.0) dd -=255.0;
             EndDrawing();
         }
 
         CloseWindow();
+
+
+    std::cout << "audio" << std::endl;
         try {
             // Stop the stream
             dac.stopStream();
+            std::cout << "rtaudio end" << std::endl;
         }
         catch (RtAudioError& e) {
             e.printMessage();
         }
         if ( dac.isStreamOpen() ) dac.closeStream();
-
     return 0;
 }

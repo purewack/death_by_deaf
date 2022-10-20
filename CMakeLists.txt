@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.10.0)
 project(deaf)
 #output to bin folder with all scripts
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../bin)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ../bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ../bin)
 set(CMAKE_CXX_STANDARD 17)
 
 #for sol2
@@ -17,6 +19,7 @@ add_subdirectory(deps/raylib)
 add_executable(${PROJECT_NAME} src/test.cpp)
 
 target_include_directories(${PROJECT_NAME} 
+	PUBLIC include
     PUBLIC deps/libpd/pure-data/src 
     PUBLIC deps/libpd/libpd_wrapper
     PUBLIC deps/rtaudio
