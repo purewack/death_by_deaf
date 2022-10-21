@@ -17,7 +17,7 @@ add_subdirectory(deps/rtaudio)
 add_subdirectory(deps/sol2)
 add_subdirectory(deps/raylib)
 
-add_executable(${PROJECT_NAME} src/main.cpp src/calls.cpp src/audio.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/deaf_audio.cpp)
 
 target_include_directories(${PROJECT_NAME} 
 	PUBLIC include

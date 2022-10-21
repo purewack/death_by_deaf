@@ -1,4 +1,4 @@
-#include "types.hpp"
+#include "deaf.hpp"
 #include <regex>
 
 
@@ -274,9 +274,9 @@ void lua_init()
 	l_visuals["chain"] = [](bool state){
 		chain_view = state;
 	};
-	l_visuals["aque"] = [](bool state){
-		audio_que_view = state;	
-	};
+	// l_visuals["aque"] = [](bool state){
+	// 	audio_que_view = state;	
+	// };
 	l_visuals["midi"] = [](bool state){
 		midi_view = state;
 	};
@@ -350,7 +350,7 @@ void lua_init()
     l_control["navigables"].get_or_create<sol::table>();
     l_control["navigate"] = [=](){
         sol::table navigables = l_control["navigables"];
-        if(navigables == sol::nil) return;
+        if(navigables == sol::lua_nil) return;
         
         unsigned int focal = 0;
         unsigned int count = 0;
@@ -432,37 +432,28 @@ void lua_init()
         });
     };
     
-    l_audio["que"].get_or_create<sol::table>();
-    l_audio["que"]["clip"].get_or_create<sol::table>();
-    l_audio["que"]["period"] = [](long p) {
-        audioActionQue.period = p;
-    };
-    l_audio["que"]["tick"] = []() -> float {
-        return audioActionQue.tick;
-    };
-    l_audio["que"]["progress"] = []() -> float {
-        return audioActionQue.period_ratio;
-    };
-    l_audio["que"]["count"] = []() -> float {
-        return audioActionQue.period_ticks;
-    };
+    // l_audio["que"].get_or_create<sol::table>();
+    // l_audio["que"]["clip"].get_or_create<sol::table>();
+    // l_audio["que"]["period"] = [](long p) {
+    //     audioActionQue.period = p;
+    // };
+    // l_audio["que"]["tick"] = []() -> float {
+    //     return audioActionQue.tick;
+    // };
+    // l_audio["que"]["progress"] = []() -> float {
+    //     return audioActionQue.period_ratio;
+    // };
+    // l_audio["que"]["count"] = []() -> float {
+    //     return audioActionQue.period_ticks;
+    // };
       
-    l_audio["que"]["confirm"] = [](){
-        audioActionQue.confirm();
-    };
-    l_audio["que"]["clear"] = [](){
-        audioActionQue.clear();
-    };
+    // l_audio["que"]["confirm"] = [](){
+    //     audioActionQue.confirm();
+    // };
+    // l_audio["que"]["clear"] = [](){
+    //     audioActionQue.clear();
+    // };
     
-    l_audio["que"]["test"] = [](){
-        audioActionQue.enque(0.5f, AudioActionQue::q_test);
-    };
-    l_audio["que"]["stop"] = [](){
-        audioActionQue.enque(0.f, AudioActionQue::q_stop);
-    };
-    l_audio["que"]["launch"] = [](){
-        audioActionQue.enque(0.f, AudioActionQue::q_launch);
-    };
     // l_audio["que"]["clip"]["clear"] = [](Clip* c, float r) -> int{
  //        return audioActionQue.add([=](){
  //            c->clear();
@@ -487,45 +478,45 @@ void lua_init()
  //            c->update();
  //        },r);
  //    };
-    lua["test_clip"] = &test_clip;
-    lua["test_clip2"] = &test_clip2;
+    // lua["test_clip"] = &test_clip;
+    // lua["test_clip2"] = &test_clip2;
     
-	auto clip = lua.new_usertype<Clip>("Clip");
-    l_audio["constants"].get_or_create<sol::table>();
-    l_audio["constants"]["clip"].get_or_create<sol::table>();
-    l_audio["constants"]["clip"]["states"].get_or_create<sol::table>();
-    l_audio["constants"]["clip"]["states"]["clear"] = 0;
-    l_audio["constants"]["clip"]["states"]["stop"]  = 1;
-    l_audio["constants"]["clip"]["states"]["base"]  = 2;
-    l_audio["constants"]["clip"]["states"]["play"]  = 3;
-    l_audio["constants"]["clip"]["states"]["dub"]   = 4;
-    clip["isClear"] = sol::property([](Clip* c){
-        return (c->state == Clip::State::clear);
-    });
-    clip["isStopped"] = sol::property([](Clip* c){
-        return (c->state == Clip::State::stop);
-    });
-    clip["isRecording"] = sol::property([](Clip* c){
-        return (c->state == Clip::State::base or c->state == Clip::State::dub);
-    });
-    clip["isDubbing"] = sol::property([](Clip* c){
-        return (c->state == Clip::State::dub);
-    });
-    clip["isMerging"] = sol::property([](Clip* c){
-        return (c->flags.refill.load() == true);
-    });
-    clip["isPlaying"] = sol::property([](Clip* c){
-        return (c->state == Clip::State::play or c->state == Clip::State::dub);
-    });
-    clip.set("state", sol::readonly(&Clip::state));
-    clip["length"] = sol::property([](Clip* c) -> unsigned long {return (unsigned long)c->length;});
-    clip["head"] = sol::property([](Clip* c) -> float {
-        if(c->length){
-            return float(c->head) / float(c->length);
-        }
+	// auto clip = lua.new_usertype<Clip>("Clip");
+    // l_audio["constants"].get_or_create<sol::table>();
+    // l_audio["constants"]["clip"].get_or_create<sol::table>();
+    // l_audio["constants"]["clip"]["states"].get_or_create<sol::table>();
+    // l_audio["constants"]["clip"]["states"]["clear"] = 0;
+    // l_audio["constants"]["clip"]["states"]["stop"]  = 1;
+    // l_audio["constants"]["clip"]["states"]["base"]  = 2;
+    // l_audio["constants"]["clip"]["states"]["play"]  = 3;
+    // l_audio["constants"]["clip"]["states"]["dub"]   = 4;
+    // clip["isClear"] = sol::property([](Clip* c){
+    //     return (c->state == Clip::State::clear);
+    // });
+    // clip["isStopped"] = sol::property([](Clip* c){
+    //     return (c->state == Clip::State::stop);
+    // });
+    // clip["isRecording"] = sol::property([](Clip* c){
+    //     return (c->state == Clip::State::base or c->state == Clip::State::dub);
+    // });
+    // clip["isDubbing"] = sol::property([](Clip* c){
+    //     return (c->state == Clip::State::dub);
+    // });
+    // clip["isMerging"] = sol::property([](Clip* c){
+    //     return (c->flags.refill.load() == true);
+    // });
+    // clip["isPlaying"] = sol::property([](Clip* c){
+    //     return (c->state == Clip::State::play or c->state == Clip::State::dub);
+    // });
+    // clip.set("state", sol::readonly(&Clip::state));
+    // clip["length"] = sol::property([](Clip* c) -> unsigned long {return (unsigned long)c->length;});
+    // clip["head"] = sol::property([](Clip* c) -> float {
+    //     if(c->length){
+    //         return float(c->head) / float(c->length);
+    //     }
         
-        return 0.f;
-    });
+    //     return 0.f;
+    // });
     // lua["clip_stop"] = [](Clip* c){clip_stop(c);};
  //    lua["clip_rec"] = [](Clip* c){clip_rec(c);};
  //    lua["clip_play"] = [](Clip* c){clip_play(c);};
@@ -1072,21 +1063,22 @@ void screen()
 
         }
 
-		if(audio_que_view){
-			DrawString("AQ [" + STR(audioActionQue.actions_count) + "] <- [" + STR(audioActionQue.actions_count) + "]", 0,S_HEIGHT-4,16,WHITE,0.0,1.0);
-			for(int i=0; i<audioActionQue.max_actions; i++){
-				std::string s = STR(i) + " > ";
-				if(audioActionQue.actions[i].pending)
-					s += audioActionQue.actions[i].name + "@" + STR(audioActionQue.actions[i].offset);
-				else s += " -- ";
-				if(audioActionQue.que[i].pending)
-					s += audioActionQue.que[i].name + "@" + STR(audioActionQue.que[i].offset);
-				else s += "| -- ";
+		// if(audio_que_view){
+		// 	DrawString("AQ [" + STR(audioActionQue.actions_count) + "] <- [" + STR(audioActionQue.actions_count) + "]", 0,S_HEIGHT-4,16,WHITE,0.0,1.0);
+		// 	for(int i=0; i<audioActionQue.max_actions; i++){
+		// 		std::string s = STR(i) + " > ";
+		// 		if(audioActionQue.actions[i].pending)
+		// 			s += audioActionQue.actions[i].name + "@" + STR(audioActionQue.actions[i].offset);
+		// 		else s += " -- ";
+		// 		if(audioActionQue.que[i].pending)
+		// 			s += audioActionQue.que[i].name + "@" + STR(audioActionQue.que[i].offset);
+		// 		else s += "| -- ";
 				
-				DrawString(s,0,S_HEIGHT-16 - 8*i, 16,WHITE,0.0,1.0);
-			}
-		}
-        else if(chain_view){
+		// 		DrawString(s,0,S_HEIGHT-16 - 8*i, 16,WHITE,0.0,1.0);
+		// 	}
+		// }
+        // else 
+		if(chain_view){
             int y = 0;
             int x = 0;
             for(auto s : chain){
