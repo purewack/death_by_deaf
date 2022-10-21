@@ -1,8 +1,26 @@
 #pragma once
 #include <vector>
 #include <atomic>
-#include <rtmidi/RtMidi.h>
-#include <rtaudio/RtAudio.h>
+#include "z_libpd.h"
+
+#if defined(_WIN32)           
+	#define NOGDI             // All GDI defines and routines
+	#define NOUSER            // All USER defines and routines
+    // Type required before windows.h inclusion
+    typedef struct tagMSG *LPMSG;
+#endif
+
+#include "RtAudio.h"
+
+#if defined(_WIN32)           // raylib uses these names as function parameters
+	#undef near
+	#undef far
+#endif
+
+#if defined(_WIN32)  
+#include <stdexcept>
+#include <limits>
+#endif
 
 #define AUDIO_CLIP_SIZE 8388608 //8MB 8*1024*1024*4bytes ~ 43s @ 48kHz
 
@@ -14,12 +32,12 @@ enum MidiBytes: int{
 	cc = 176, //xb0
 };
 
-inline std::vector<unsigned char> rawmidi;
-inline RtMidiIn scanner;
-inline int devicesCount = 0;
-inline std::vector<RtMidiIn*> devices;
+// inline std::vector<unsigned char> rawmidi;
+// inline RtMidiIn scanner;
+// inline int devicesCount = 0;
+// inline std::vector<RtMidiIn*> devices;
 
-inline RtAudio hw_audio;
+inline RtAudio adac;
 
 void audio_end();
 int audio_init();

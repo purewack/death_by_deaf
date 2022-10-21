@@ -42,7 +42,7 @@ struct VSequence{
 };
 
 struct VElement{
-    unsigned long id = (unsigned long)this;
+    unsigned long id = 0;//(unsigned long)this;
 	float x = 0;
 	float y = 0;
 	float w = 16;
@@ -1005,6 +1005,8 @@ void do_console()
 
 void screen()
 {
+	SetTraceLogLevel(LOG_ERROR);
+    std::cout << "[gfx]" << std::endl;
     time_ac_old = time_ac_now = std::chrono::high_resolution_clock::now();
 	while(not WindowShouldClose()){
          
@@ -1162,52 +1164,52 @@ void pollCtrl()
 	bo = bb;
 }
 
-void pollMidi()
-{
-	//connection management
-	unsigned int nDevicesCount = scanner.getPortCount();
-	if(nDevicesCount != devicesCount){
-		LOG((nDevicesCount > devicesCount ? "Midi connect" : "Midi disconnect"));
-		for( RtMidiIn* d : devices ){
-			d->closePort();
-		}
-		devices.clear();
-		for (int i=0; i<nDevicesCount; i++) {
-			try {
-				devices.push_back(new RtMidiIn());
-				devices.back()->openPort(i);
-			}
-			catch ( RtMidiError &error ) {
-				error.printMessage();
-			}
-		}
-		devicesCount = nDevicesCount;
-	}
+// void pollMidi()
+// {
+// 	//connection management
+// 	unsigned int nDevicesCount = scanner.getPortCount();
+// 	if(nDevicesCount != devicesCount){
+// 		LOG((nDevicesCount > devicesCount ? "Midi connect" : "Midi disconnect"));
+// 		for( RtMidiIn* d : devices ){
+// 			d->closePort();
+// 		}
+// 		devices.clear();
+// 		for (int i=0; i<nDevicesCount; i++) {
+// 			try {
+// 				devices.push_back(new RtMidiIn());
+// 				devices.back()->openPort(i);
+// 			}
+// 			catch ( RtMidiError &error ) {
+// 				error.printMessage();
+// 			}
+// 		}
+// 		devicesCount = nDevicesCount;
+// 	}
 	
 
-	//scan event per device
-	for(RtMidiIn* input : devices){
-		for(int d=0; d<nDevicesCount; d++){
-			input->getMessage( &rawmidi );
-			int nBytes = rawmidi.size();
+// 	//scan event per device
+// 	for(RtMidiIn* input : devices){
+// 		for(int d=0; d<nDevicesCount; d++){
+// 			input->getMessage( &rawmidi );
+// 			int nBytes = rawmidi.size();
 
-			unsigned char bytes[3];
-			int n=0;
+// 			unsigned char bytes[3];
+// 			int n=0;
 
-			for (int i=0; i<nBytes; i++ ){
-				bytes[n] = rawmidi[i];
-				n++;
-				if(n==3){
-					n = 0;
-					//LOG(m.print());
-                    std::lock_guard<std::mutex> lg(mtx_fps);
-                    lua["control"]["checkEvent"](d,bytes[0],bytes[1],bytes[2]);
-					//checkEvent(&m);
-				}
-			}
-		}
-	}
-}
+// 			for (int i=0; i<nBytes; i++ ){
+// 				bytes[n] = rawmidi[i];
+// 				n++;
+// 				if(n==3){
+// 					n = 0;
+// 					//LOG(m.print());
+//                     std::lock_guard<std::mutex> lg(mtx_fps);
+//                     lua["control"]["checkEvent"](d,bytes[0],bytes[1],bytes[2]);
+// 					//checkEvent(&m);
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 void init()
 {
@@ -1216,7 +1218,7 @@ void init()
 	commands.push_back("");
 	command = "";
 	
-	InitWindow(S_WIDTH,S_HEIGHT_T,"M O T I F  AUDIO (luatif)");
+	InitWindow(S_WIDTH,S_HEIGHT_T,"DEAF Engine");
 	SetTargetFPS(30);
 	
 	lua_init();
@@ -1234,23 +1236,23 @@ int main(int argc, char* argv[])
     static std::atomic_bool running = true;
     std::thread thread_input([=](){
         while(running){
-            pollMidi();
+            // pollMidi();
             pollCtrl();
             usleep(10000);
         }
     });
-    std::thread thread_audio_supervise([=](){
-        while(running){
-            audio_supervisor();
-            usleep(10000);
-        }
-    });
+    // std::thread thread_audio_supervise([=](){
+    //     while(running){
+    //         audio_supervisor();
+    //         usleep(10000);
+    //     }
+    // });
 
     screen();
     
     running = false;
     thread_input.join();
-    thread_audio_supervise.join();
+    //thread_audio_supervise.join();
     audio_end();
 	//////////////////
     // audio_init();

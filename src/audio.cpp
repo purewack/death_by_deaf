@@ -4,70 +4,66 @@ float in01,in0,in1,pin0,pin1;
 float out01;
 
 
-
-int process ( void *out_b, void *in_b, unsigned int nBufferFrames,
-           double streamTime, RtAudioStreamStatus status, void *data )
-{ 	
-	float* in_lr = (float*)in_b;
-	float* out_lr = (float*)out_b;
-	
+int rtaudio_process( void *outputBuffer, void *inputBuffer, unsigned int nBufferFrames,
+         double streamTime, RtAudioStreamStatus status, void *userData )
+{
     auto t = new ScopedTimer(&bench_dsp);
-    //
-    // inl = (float*)jack_port_get_buffer(input_portl, nframes);
-    // inr = (float*)jack_port_get_buffer(input_portr, nframes);
-    // outl = (float*)jack_port_get_buffer(output_portl, nframes);
-    // outr = (float*)jack_port_get_buffer(output_portr, nframes);
-
-    audioActionQue();
-    for(int i=0; i<nBufferFrames; i++){
-        // float spl0 = inl[i];
-        // test_clip(&spl0);
-      //   test_clip2(&spl0);
-        // outl[i] = spl0;
-    }
-    ++audioActionQue;
-
+    float *out_buffer = (float *) outputBuffer;
+    float *in_buffer = (float *) inputBuffer;
+    libpd_process_float(4,in_buffer,out_buffer);
     delete t;
     return 0;
 }
-
+void pdprint(const char *s) {
+	std::cout << "[libpd]" << s << std::endl;
+}
 
 void audio_end()
 {
-	if ( hw_audio.isStreamOpen() ) hw_audio.closeStream();
+	std::cout << "audio" << std::endl;
+        try {
+            adac.stopStream();
+   		std::cout << "rtaudio end" << std::endl;
+        }
+        catch (RtAudioError& e) {
+            e.printMessage();
+        }
+        if ( adac.isStreamOpen() ) adac.closeStream();
 }
 int audio_init(){
-  if ( hw_audio.getDeviceCount() < 1 ) {
-  		return -1;
-  	}
-  	RtAudio::StreamParameters iParams, oParams;
-  	iParams.deviceId = hw_audio.getDefaultInputDevice(); // first available device
-  	iParams.nChannels = 2;
-    
-  	oParams.deviceId = hw_audio.getDefaultOutputDevice(); // first available device
-  	oParams.nChannels = 2;
-    oParams.firstChannel = 0;
-    
-  	RtAudio::StreamOptions oStream;
-  	oStream.flags = 0;//RTAUDIO_SCHEDULE_REALTIME | RTAUDIO_HOG_DEVICE;
-  	oStream.priority = 90;
-    unsigned int buf_size = 256;
-    
-  	try {
-  		hw_audio.openStream( &oParams, &iParams, RTAUDIO_FLOAT32, 48000, &buf_size, &process, &oStream);
-  	}
-  	catch ( RtAudioError& e ) {
-      e.printMessage();
-  		return -1;
-  	}
-  	try {
-  		hw_audio.startStream();
-      max_dsp = std::chrono::duration_cast<std::chrono::nanoseconds>(frametime{1});
-  	}
-  	catch ( RtAudioError& e ) {
-      e.printMessage();
-  		return -1;
-  	}
+
+    std::cout << "[audio]" << std::endl;
+        std::cout << "libpd" << std::endl;
+            libpd_set_printhook(pdprint);
+            libpd_init();
+            libpd_init_audio(0, 2, 44100);
+            libpd_start_message(1); 
+            libpd_add_float(1.0f);
+            libpd_finish_message("pd", "dsp");
+            if (!libpd_openfile("main.pd","./sound"))
+                return -1;
+            
+            if ( adac.getDeviceCount() < 1 ) 
+                return -1;
+            
+            RtAudio::StreamParameters parameters;
+            parameters.deviceId = adac.getDefaultOutputDevice();
+            parameters.nChannels = 2;
+            parameters.firstChannel = 0;
+            unsigned int sampleRate = 44100;
+            unsigned int bufferFrames = 256; 
+            double data[2] = {0,0};
+            try {
+                adac.openStream( &parameters, NULL, RTAUDIO_FLOAT32,
+                                sampleRate, &bufferFrames, &rtaudio_process, NULL );
+                adac.startStream();
+                max_dsp = std::chrono::duration_cast<std::chrono::nanoseconds>(frametime{1});
+                std::cout << "rtaudio start" << std::endl;
+            }
+            catch ( RtAudioError& e ) {
+                e.printMessage();
+            return -1;
+            } 
     
    return 0;
 }
@@ -184,7 +180,7 @@ void AudioActionQue::operator++(){
 
 
 Clip::Clip(){
-    id = (unsigned long)this;
+    id = 0;//(unsigned long)this;
 	_aData  =  (float*)calloc(AUDIO_CLIP_SIZE,sizeof(float));
 	_bData  =  (float*)calloc(AUDIO_CLIP_SIZE,sizeof(float));  
     clear();

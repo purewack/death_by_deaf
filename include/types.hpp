@@ -1,7 +1,4 @@
 #pragma once
-#define SOL_ALL_SAFETIES_ON 1
-#include "sol/sol.hpp" // or #include "sol.hpp", whichever suits your needs
-#include <raylib.h>
 #include <vector>
 #include <chrono>
 #include <iostream>
@@ -11,13 +8,17 @@
 #include <mutex>
 #include <functional>
 #include <atomic>
+#include <cstdlib>
+
+#include "raylib.h"
 #include "audio.hpp"
+#include "sol.hpp" 
 
 inline std::string sesh;
 
-#define S_WIDTH 640
-#define S_HEIGHT 480
-#define S_HEIGHT_T 580
+inline unsigned int S_WIDTH = 800;
+inline unsigned int S_HEIGHT = 600;
+inline unsigned int S_HEIGHT_T = 680;
 inline int g_div = 8;
 
 inline sol::state lua;

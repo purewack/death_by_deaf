@@ -6,6 +6,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ../bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ../bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ../bin)
 set(CMAKE_CXX_STANDARD 17)
+add_compile_options(-Wno-narrowing )
 
 #for sol2
 find_package(Lua51 REQUIRED)
@@ -16,7 +17,7 @@ add_subdirectory(deps/rtaudio)
 add_subdirectory(deps/sol2)
 add_subdirectory(deps/raylib)
 
-add_executable(${PROJECT_NAME} src/test.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp src/calls.cpp src/audio.cpp)
 
 target_include_directories(${PROJECT_NAME} 
 	PUBLIC include
