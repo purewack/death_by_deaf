@@ -24,6 +24,7 @@ int audio_init(){
         std::cout << "libpd" << std::endl;
             libpd_set_printhook(pdprint);
             libpd_init();
+            libpd_add_to_search_path("../deps/libpd/pure-data/extra");
             libpd_init_audio(0, 2, 44100);
             libpd_start_message(1); 
             libpd_add_float(1.0f);
