@@ -839,6 +839,8 @@ void screen()
         ClearBackground(BLACK);
         auto timer_fps = new ScopedTimer(&bench_fps);
 
+		onSceneVideoFrame();
+
         {
             std::lock_guard<std::mutex> lg(mtx_fps);
             auto timer_frame = new ScopedTimer(&bench_frame);
