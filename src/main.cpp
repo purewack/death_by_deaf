@@ -942,6 +942,19 @@ void screen()
 
 void pollCtrl()
 {
+    if(IsKeyPressed(KEY_W)){
+        libpd_bang("walk_start");
+    }
+    if(IsKeyReleased(KEY_W)){
+        libpd_bang("walk_stop");
+    }
+    if(IsKeyPressed(KEY_S)){
+        libpd_bang("walk_start");
+    }
+    if(IsKeyReleased(KEY_S)){
+        libpd_bang("walk_stop");
+    }
+
     std::lock_guard<std::mutex> lg(mtx_fps);
 	Vector2 m = GetMousePosition();
 	bool bb = IsMouseButtonDown(0);

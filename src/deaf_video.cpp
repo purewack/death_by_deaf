@@ -25,12 +25,12 @@ void onSceneVideoFrame(){
     EndMode3D();
 
     if(IsKeyDown(KEY_W)) {
-        player.position.z += 0.2f*std::cos(rotation);
-        player.position.x += 0.2f*std::sin(rotation);
+        player.position.z += 0.06f*std::cos(rotation);
+        player.position.x += 0.06f*std::sin(rotation);
     }
     if(IsKeyDown(KEY_S)) {
-        player.position.z -= 0.2f*std::cos(rotation);
-        player.position.x -= 0.2f*std::sin(rotation);
+        player.position.z -= 0.06f*std::cos(rotation);
+        player.position.x -= 0.06f*std::sin(rotation);
     }
     if(IsKeyDown(KEY_A)) {
         rotation += (2.0f/360.0f)*2.0f*3.1415f;
