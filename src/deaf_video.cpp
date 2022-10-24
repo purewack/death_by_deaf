@@ -6,12 +6,17 @@ Camera player;
 Vector3 cubePos;
 float rotation;
 
+extern Vector3 pos_door;
+extern Model mod_door;
+extern Texture2D tex_door;
+
 void onSceneVideoFrame(){
     if(!done3d){
         done3d = true;
         player = { { 0.0f, 1.0f, 0.0f }, { 0.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
 	      rotation = 0.0;
         cubePos = { 4.0f, 1.0f, 4.0f };
+
     }    
     BeginMode3D(player);
 
@@ -22,7 +27,11 @@ void onSceneVideoFrame(){
         DrawCube(cubePos, 1.0f,1.0f,1.0f,WHITE);
         DrawCubeWires(cubePos, 1.0f,1.0f,1.0f,WHITE);
         DrawGrid(40, 1.0f);        // Draw a grid
+
+        DrawModel(mod_door,pos_door,1.f,WHITE);
     EndMode3D();
+
+    UpdateCamera(&player);
 
     if(IsKeyDown(KEY_W)) {
         player.position.z += 0.06f*std::cos(rotation);

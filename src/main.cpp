@@ -1048,6 +1048,9 @@ void pollCtrl()
 // 	}
 // }
 
+Vector3 pos_door;
+Model mod_door;
+Texture2D tex_door;
 void init()
 {
 	current_script = "scripts/screen_root.lua";
@@ -1058,6 +1061,11 @@ void init()
 	InitWindow(S_WIDTH,S_HEIGHT_T,"DEAF Engine");
 	SetTargetFPS(30);
 	
+        mod_door = LoadModel("gfx/door.obj");
+        tex_door = LoadTexture("gfx/door_uv.png");
+        pos_door = {0.0f, 0.0f, 20.f};
+        mod_door.materials[0].maps[MATERIAL_MAP_DIFFUSE].texture = tex_door;
+
 	lua_init();
 	script();
 }
