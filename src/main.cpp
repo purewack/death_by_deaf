@@ -4,6 +4,8 @@
 void init();
 void pollCtrl();
 void screen();
+Camera3D player_cam;
+float player_rotation = 0.0f;
 
 int main(int argc, char* argv[]) 
 {
@@ -417,13 +419,31 @@ void lua_init()
     ubtn["type"] = &VUnitButton::type;
     ubtn["v_hue"] = &VUnitButton::v_hue;
     
-    
+	auto obj = lua.new_usertype<VObject>("VObject",sol::base_classes, sol::bases<VElement>());
+    obj["z"] = &VObject::z;
+    obj["az"] = &VObject::a_z;
+    obj["rotx"] = &VObject::rot_x;
+    obj["scale"] = &VObject::scale;
+
 	l_visuals["createTexture"] = [](std::string t) -> Texture2D {
 		auto tex = LoadTexture((t).c_str());
 		textures_in_script.push_back(tex);
 		return tex;
 	};
 	
+    l_visuals["removeVObject"] = [](VObject* l){
+        objects.erase(std::remove_if(
+			objects.begin(), 
+            objects.end(),
+            [=](auto a){
+            	if(a == l){
+					return true;
+            	}
+            	return false;
+            }),
+            objects.end()
+        );
+	};
 	l_visuals["removeVElement"] = [](VElement* l){
         elements.erase(std::remove_if(
 			elements.begin(), 
@@ -470,6 +490,11 @@ void lua_init()
 		elements.push_back(l);
 		return l;
 	};
+    l_visuals["addVObject"] = [](std::string model_path) -> VObject* {
+        auto m = new VObject(model_path);
+        objects.push_back(m);
+        return m;
+    };
 	
 
 	l_visuals["placeVElement"] = [](VElement* v, float x, float y){
@@ -753,6 +778,29 @@ void do_elements()
 	delete timer_elem;
 }
 
+bool init3d = false;
+void do_objects()
+{
+    if(!init3d){
+        init3d = true;
+        player_cam = { { 0.0f, 1.5f, 0.0f }, { 0.0f, 1.5f, 1.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
+    }
+
+    BeginMode3D(player_cam);
+        DrawCube({0.5f,0.f,0.f}, 1.0f,0.1f,0.1f,RED);
+        DrawCube({0.f,0.5f,0.f}, 0.1f,1.0f,0.1f,GREEN);
+        DrawCube({0.f,0.f,0.5f}, 0.1f,0.1f,1.0f,BLUE);
+        DrawGrid(40, 1.0f);        // Draw a grid
+
+        for(auto o : objects){
+            o->draw();
+        }
+    EndMode3D();
+
+  	player_cam.target.x = player_cam.position.x + std::sin(player_rotation);
+  	player_cam.target.z = player_cam.position.z + std::cos(player_rotation);
+}
+
 void do_grid()
 {
 	if(layout_grid){
@@ -839,7 +887,7 @@ void screen()
         ClearBackground(BLACK);
         auto timer_fps = new ScopedTimer(&bench_fps);
 
-		onSceneVideoFrame();
+		//onSceneVideoFrame();
 
         {
             std::lock_guard<std::mutex> lg(mtx_fps);
@@ -850,6 +898,7 @@ void screen()
 
         {
         std::lock_guard<std::mutex> lg(mtx_fps);
+        do_objects();
         do_elements();
         do_actions();
         }
@@ -953,7 +1002,22 @@ void pollCtrl()
     }
     if(IsKeyReleased(KEY_S)){
         libpd_bang("walk_stop");
+    } 
+    if(IsKeyDown(KEY_W)) {
+        player_cam.position.z += 0.06f*std::cos(player_rotation);
+        player_cam.position.x += 0.06f*std::sin(player_rotation);
     }
+    if(IsKeyDown(KEY_S)) {
+        player_cam.position.z -= 0.06f*std::cos(player_rotation);
+        player_cam.position.x -= 0.06f*std::sin(player_rotation);
+    }
+    if(IsKeyDown(KEY_A)) {
+        player_rotation += (2.0f/360.0f)*2.0f*3.1415f;
+    }
+    if(IsKeyDown(KEY_D)) {
+        player_rotation -= (2.0f/360.0f)*2.0f*3.1415f;
+    }
+
 
     std::lock_guard<std::mutex> lg(mtx_fps);
 	Vector2 m = GetMousePosition();

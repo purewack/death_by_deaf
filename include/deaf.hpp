@@ -30,6 +30,7 @@ inline std::vector<std::string> mevents; //midi events
 inline std::string current_script;
 inline std::vector<VSequence*> actions;
 inline std::vector<VElement*> elements;
+inline std::vector<VObject*> objects;
 inline std::function<void(void)> onFrame = nullptr;
 inline std::function<void(void)> onUIFrame = nullptr;
 using fpstime = std::chrono::duration<int64_t, std::ratio<1,30>>;

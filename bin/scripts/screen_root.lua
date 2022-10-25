@@ -89,3 +89,12 @@ vignette.w = 800
 vignette.h = 600
 vignette.ax = 0.0
 vignette.ay = 0.0
+
+
+door1 = visuals.addVObject("gfx/door.obj")
+door1.z = 10.0
+door1.x = 2.0
+
+door2 = visuals.addVObject("gfx/door.obj")
+door2.z = 10.0
+door2.x = -2.0

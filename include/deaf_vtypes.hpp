@@ -55,6 +55,18 @@ struct VImage : public VElement {
 	void draw() override;
 };
 
+struct VObject : public VElement {
+	float z = 0.f;
+	float a_z = 0.f;
+	float rot_x = 0.f;
+	float scale = 1.f;
+	Model model;
+	void draw() override;
+
+	VObject(std::string path);
+	virtual ~VObject();
+};
+
 
 struct VLabel : public VElement{
 

@@ -92,6 +92,15 @@ void VImage::draw() {
     }
 };
 
+VObject::VObject(std::string path){
+    model = LoadModel(path.c_str());
+}
+VObject::~VObject(){
+    UnloadModel(model);
+}
+void VObject::draw(){
+    DrawModel(model,{x,y,z},scale,col);
+}
 
 void VLabel::draw() {
     if(w == 0 or h == 0) return;

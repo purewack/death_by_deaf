@@ -10,7 +10,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd src/door_uv.png
+map_Kd door_uv.png
 
 newmtl Material.004
 Ns 250.000000
@@ -21,4 +21,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 1
-map_Kd src/door_uv.png
+map_Kd door_uv.png
