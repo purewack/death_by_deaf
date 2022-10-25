@@ -43,40 +43,40 @@ local n_cc = control.ev_note_cc
 -- end
 
 
-prog = visuals.addVTimer()
-prog.x = 320
-prog.y = 200
-prog.w = 200
-prog.circular = false
+-- prog = visuals.addVTimer()
+-- prog.x = 320
+-- prog.y = 200
+-- prog.w = 200
+-- prog.circular = false
 
-lbl_c_state = visuals.addVLabel("")
-lbl_c_state.x = 320
-lbl_c_state.y = 260
+-- lbl_c_state = visuals.addVLabel("")
+-- lbl_c_state.x = 320
+-- lbl_c_state.y = 260
 
-local aa = 0
+-- local aa = 0
 
-visuals.onFrame = function()    
-    -- local c = test_clip
-    -- local bb = control.units[control.key_pad1]
-    -- if(c.isClear) then bb.v_hue = 0; end
-    -- if(c.isStopped) then bb.v_hue = visuals.HUE_ORANGE; end
-    -- if(c.isPlaying) then bb.v_hue = visuals.HUE_GREEN; end
-    -- if(c.isRecording) then bb.v_hue = visuals.HUE_RED; end
-    -- if(c.isMerging) then bb.v_hue = visuals.HUE_PURPLE; end
+-- visuals.onFrame = function()    
+--     -- local c = test_clip
+--     -- local bb = control.units[control.key_pad1]
+--     -- if(c.isClear) then bb.v_hue = 0; end
+--     -- if(c.isStopped) then bb.v_hue = visuals.HUE_ORANGE; end
+--     -- if(c.isPlaying) then bb.v_hue = visuals.HUE_GREEN; end
+--     -- if(c.isRecording) then bb.v_hue = visuals.HUE_RED; end
+--     -- if(c.isMerging) then bb.v_hue = visuals.HUE_PURPLE; end
 
-    -- local c = test_clip2
-    -- local bb = control.units[control.key_pad2]
-    -- if(c.isClear) then bb.v_hue = 0; end
-    -- if(c.isStopped) then bb.v_hue = visuals.HUE_ORANGE; end
-    -- if(c.isPlaying) then bb.v_hue = visuals.HUE_GREEN; end
-    -- if(c.isRecording) then bb.v_hue = visuals.HUE_RED; end
-    -- if(c.isMerging) then bb.v_hue = visuals.HUE_PURPLE; end
+--     -- local c = test_clip2
+--     -- local bb = control.units[control.key_pad2]
+--     -- if(c.isClear) then bb.v_hue = 0; end
+--     -- if(c.isStopped) then bb.v_hue = visuals.HUE_ORANGE; end
+--     -- if(c.isPlaying) then bb.v_hue = visuals.HUE_GREEN; end
+--     -- if(c.isRecording) then bb.v_hue = visuals.HUE_RED; end
+--     -- if(c.isMerging) then bb.v_hue = visuals.HUE_PURPLE; end
     
-    -- local t = audio.que.progress()
-    -- local ct = audio.que.tick()
+--     -- local t = audio.que.progress()
+--     -- local ct = audio.que.tick()
     
-    prog.progress = aa/100
-    aa = aa+1
-    aa = aa%100
-    lbl_c_state.text = tostring(aa)
-end
+--     prog.progress = aa/100
+--     aa = aa+1
+--     aa = aa%100
+--     lbl_c_state.text = tostring(aa)
+-- end
