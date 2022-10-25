@@ -76,8 +76,8 @@ void VImage::SetTexture(Texture2D t){
 }
 
 void VImage::draw() {
-    VElement::draw();
-    //if(tex){
+    //VElement::draw();
+    if(tex.id){
         float sw = tex.width/tmx;
         float sh = tex.height/tmy;
         float sx = sw*tx;
@@ -89,7 +89,7 @@ void VImage::draw() {
             Vector2{0,0},0,WHITE);
 
     
-    //}
+    }
 };
 
 

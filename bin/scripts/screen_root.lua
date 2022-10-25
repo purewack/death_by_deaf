@@ -42,7 +42,6 @@ local n_cc = control.ev_note_cc
 --     audio.que.confirm()
 -- end
 
-
 -- prog = visuals.addVTimer()
 -- prog.x = 320
 -- prog.y = 200
@@ -80,3 +79,13 @@ local n_cc = control.ev_note_cc
 --     aa = aa%100
 --     lbl_c_state.text = tostring(aa)
 -- end
+
+vignette = visuals.addVImage()
+vig_tex = visuals.createTexture("gfx/vig.png")
+vignette.tex = vig_tex
+vignette.x = 0
+vignette.y = 0
+vignette.w = 800
+vignette.h = 600
+vignette.ax = 0.0
+vignette.ay = 0.0
