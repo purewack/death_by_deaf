@@ -112,6 +112,9 @@ void lua_init()
 	l_visuals["midi"] = [](bool state){
 		midi_view = state;
 	};
+    l_visuals["floor"] = [](bool state){
+		floor_view = state;
+	};
 	l_system["toggleAnimation"] = [](){
 		if(onFrame) onFrame = nullptr;
 		else onFrame = lua["onFrame"];
@@ -422,7 +425,10 @@ void lua_init()
 	auto obj = lua.new_usertype<VObject>("VObject",sol::base_classes, sol::bases<VElement>());
     obj["z"] = &VObject::z;
     obj["az"] = &VObject::a_z;
-    obj["rotx"] = &VObject::rot_x;
+    obj["axis_x"] = &VObject::ax_x;
+    obj["axis_z"] = &VObject::ax_z;
+    obj["axis_y"] = &VObject::ax_y;
+    obj["axis_angle"] = &VObject::ax_angle;
     obj["scale"] = &VObject::scale;
 
 	l_visuals["createTexture"] = [](std::string t) -> Texture2D {
@@ -787,11 +793,12 @@ void do_objects()
     }
 
     BeginMode3D(player_cam);
-        DrawCube({0.5f,0.f,0.f}, 1.0f,0.1f,0.1f,RED);
-        DrawCube({0.f,0.5f,0.f}, 0.1f,1.0f,0.1f,GREEN);
-        DrawCube({0.f,0.f,0.5f}, 0.1f,0.1f,1.0f,BLUE);
-        DrawGrid(40, 1.0f);        // Draw a grid
-
+        if(floor_view){
+            DrawCube({0.5f,0.f,0.f}, 1.0f,0.1f,0.1f,RED);
+            DrawCube({0.f,0.5f,0.f}, 0.1f,1.0f,0.1f,GREEN);
+            DrawCube({0.f,0.f,0.5f}, 0.1f,0.1f,1.0f,BLUE);
+            DrawGrid(40, 1.0f);        // Draw a grid
+        }
         for(auto o : objects){
             o->draw();
         }

@@ -58,7 +58,10 @@ struct VImage : public VElement {
 struct VObject : public VElement {
 	float z = 0.f;
 	float a_z = 0.f;
-	float rot_x = 0.f;
+	float ax_x = 0.f;
+	float ax_z = 0.f;
+	float ax_y = 0.f;
+	float ax_angle = 0.f;
 	float scale = 1.f;
 	Model model;
 	void draw() override;

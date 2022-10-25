@@ -99,7 +99,7 @@ VObject::~VObject(){
     UnloadModel(model);
 }
 void VObject::draw(){
-    DrawModel(model,{x,y,z},scale,col);
+    DrawModelEx(model,{x,y,z},{ax_x,ax_y,ax_z},ax_angle,{scale,scale,scale},col);
 }
 
 void VLabel::draw() {

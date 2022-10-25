@@ -45,6 +45,7 @@ inline bool bench_view = false;
 inline bool chain_view = false;
 inline bool audio_que_view = false;
 inline bool midi_view = false;
+inline bool floor_view = false;
 inline bool in_console = false;
 inline bool reload = false;
 inline bool shift_down = false;

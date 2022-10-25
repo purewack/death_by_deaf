@@ -80,6 +80,9 @@ local n_cc = control.ev_note_cc
 --     lbl_c_state.text = tostring(aa)
 -- end
 
+
+visuals.floor(false)
+
 vignette = visuals.addVImage()
 vig_tex = visuals.createTexture("gfx/vig.png")
 vignette.tex = vig_tex
@@ -94,7 +97,11 @@ vignette.ay = 0.0
 door1 = visuals.addVObject("gfx/door.obj")
 door1.z = 10.0
 door1.x = 2.0
+door1.axis_y = 1.0
+door1.axis_angle = 180
 
 door2 = visuals.addVObject("gfx/door.obj")
 door2.z = 10.0
 door2.x = -2.0
+door2.axis_y = 1.0
+door2.axis_angle = 180
