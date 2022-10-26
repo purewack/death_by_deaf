@@ -985,6 +985,8 @@ void screen()
 
         do_console();
 
+        DrawFPS(700, 10);
+
         EndDrawing();
 
         {
