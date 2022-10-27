@@ -4,8 +4,6 @@ void init();
 void pollCtrl();
 void screen();
 void script();
-Camera3D player_cam;
-float player_rotation = 0.0f;
 
 int main(int argc, char* argv[]) 
 {
@@ -39,7 +37,13 @@ void init()
 	command = "";
 	
 	InitWindow(S_WIDTH,S_HEIGHT_T,"DEAF Engine");
-	SetTargetFPS(120);
+	SetTargetFPS(
+		#ifdef WIN32
+		120
+		#else
+		60
+		#endif
+	);
 
 	lua_init();
 	script();
