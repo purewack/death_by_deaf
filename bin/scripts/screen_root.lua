@@ -81,7 +81,7 @@ local n_cc = control.ev_note_cc
 -- end
 
 
-visuals.floor(false)
+visuals.floor(true)
 
 vignette = visuals.addVImage()
 vig_tex = visuals.createTexture("gfx/vig.png")

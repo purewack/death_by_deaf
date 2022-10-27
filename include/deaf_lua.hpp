@@ -49,6 +49,30 @@ struct VElement{
 	virtual void draw();
 };
 
+struct VLabel : public VElement{
+
+	virtual ~VLabel(){};
+	
+	std::string text;
+	int size = 16;
+	int font = 0;
+	
+	void draw() override;
+};
+
+struct VButton : public VElement {
+	
+	VButton(){col = BLACK;}
+	virtual ~VButton(){};
+	bool state = false;
+	bool selected = false;
+	std::function<void(void)> onPress = nullptr;
+	std::function<void(void)> onRelease = nullptr;
+	
+	void draw() override;
+	//void onPress();
+};
+
 
 struct VImage : public VElement {
 	Texture2D tex;
@@ -77,31 +101,16 @@ struct VObject : public VElement {
 	virtual ~VObject();
 };
 
-
-struct VLabel : public VElement{
-
-	virtual ~VLabel(){};
-	
-	std::string text;
-	int size = 16;
-	int font = 0;
-	
-	void draw() override;
+struct VPlayer
+{
+	Camera3D cam;
+	Vector2 rot;
+	Vector2 mpos;
+	bool active = true;
 };
 
-struct VButton : public VElement {
-	
-	VButton(){col = BLACK;}
-	virtual ~VButton(){};
-	bool state = false;
-	bool selected = false;
-	std::function<void(void)> onPress = nullptr;
-	std::function<void(void)> onRelease = nullptr;
-	
-	void draw() override;
-	//void onPress();
-};
 
+inline VPlayer puppet;
 inline std::vector<Font> fonts;
 inline Font ui_font;
 Vector2 DrawString(std::string str ,float x, float y, float s = 16, Color c = WHITE, float anchorX = 0.0f, float anchorY = 0.0f, Font f = ui_font);

@@ -197,7 +197,10 @@ void VObject_bind(){
 	
 }
 
-
+void VPlayer_bind(){
+    auto lua_player = lua["player"].get_or_create<sol::table>();
+    lua_player["active"] = &puppet.active;
+}
 
 
 void lua_Vbind(){
@@ -206,5 +209,6 @@ void lua_Vbind(){
     VLabel_bind();
     VImage_bind();
     VObject_bind();
+    VPlayer_bind();
 }
 

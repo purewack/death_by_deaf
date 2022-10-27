@@ -47,6 +47,9 @@ void init()
 
 	lua_init();
 	script();
+	
+	DisableCursor();
+	puppet.cam = { { 0.0f, 1.5f, 0.0f }, { 0.0f, 1.5f, 1.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
 }
 
 void execCommand(){
@@ -172,15 +175,9 @@ void do_elements()
 	delete timer_elem;
 }
 
-bool init3d = false;
 void do_objects()
 {
-    if(!init3d){
-        init3d = true;
-        player_cam = { { 0.0f, 1.5f, 0.0f }, { 0.0f, 1.5f, 1.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
-    }
-
-    BeginMode3D(player_cam);
+    BeginMode3D(puppet.cam);
         if(floor_view){
             DrawCube({0.5f,0.f,0.f}, 1.0f,0.1f,0.1f,RED);
             DrawCube({0.f,0.5f,0.f}, 0.1f,1.0f,0.1f,GREEN);
@@ -191,9 +188,6 @@ void do_objects()
             o->draw();
         }
     EndMode3D();
-
-  	player_cam.target.x = player_cam.position.x + std::sin(player_rotation);
-  	player_cam.target.z = player_cam.position.z + std::cos(player_rotation);
 }
 
 void do_grid()
@@ -385,9 +379,10 @@ void screen()
 	CloseWindow();
 }
 
-
+float dt = 0.f;
 void pollCtrl()
 {
+	dt += 1.f/60.f;
     if(IsKeyPressed(KEY_W)){
         libpd_bang("walk_start");
     }
@@ -401,23 +396,34 @@ void pollCtrl()
         libpd_bang("walk_stop");
     } 
     if(IsKeyDown(KEY_W)) {
-        player_cam.position.z += 0.06f*std::cos(player_rotation);
-        player_cam.position.x += 0.06f*std::sin(player_rotation);
+        puppet.cam.position.z += 0.06f*std::cos(puppet.rot.x);
+        puppet.cam.position.x += 0.06f*std::sin(puppet.rot.x);
+        puppet.cam.position.y = 1.5f + 0.04f*std::sin(dt*6.f);//head bop
     }
     if(IsKeyDown(KEY_S)) {
-        player_cam.position.z -= 0.06f*std::cos(player_rotation);
-        player_cam.position.x -= 0.06f*std::sin(player_rotation);
+        puppet.cam.position.z -= 0.03f*std::cos(puppet.rot.x);
+        puppet.cam.position.x -= 0.03f*std::sin(puppet.rot.x);
+        puppet.cam.position.y = 1.5f + 0.02f*std::sin(dt*6.f);//head bop
     }
-    if(IsKeyDown(KEY_A)) {
-        player_rotation += (2.0f/360.0f)*2.0f*3.1415f;
-    }
-    if(IsKeyDown(KEY_D)) {
-        player_rotation -= (2.0f/360.0f)*2.0f*3.1415f;
-    }
-
+    // if(IsKeyDown(KEY_A)) {
+    //     puppet.rot.x += (2.0f/360.0f)*2.0f*3.1415f;
+    // }
+    // if(IsKeyDown(KEY_D)) {
+    //     puppet.rot.x -= (2.0f/360.0f)*2.0f*3.1415f;
+    // }
+	puppet.cam.target.x = puppet.cam.position.x + std::sin(puppet.rot.x);
+	puppet.cam.target.z = puppet.cam.position.z + std::cos(puppet.rot.x);
+	puppet.cam.target.y = puppet.cam.position.y + puppet.rot.y;
+	puppet.rot.x = ((puppet.mpos.x / float(S_WIDTH)) - 0.5) * -3.1415;
+	puppet.rot.y = ((puppet.mpos.y / float(S_HEIGHT)) - 0.5) * -3.1415;
+	std::clamp(puppet.rot.y, 0.f, 1.f);
+	
+	auto m = GetMousePosition();
+	auto aa = 0.1f; //floatiness of camera
+	puppet.mpos.x += ((m.x-puppet.mpos.x)*aa);
+	puppet.mpos.y += ((m.y-puppet.mpos.y)*aa);
 
     std::lock_guard<std::mutex> lg(mtx_fps);
-	Vector2 m = GetMousePosition();
 	bool bb = IsMouseButtonDown(0);
 	static bool bo;
 	for(auto e : elements)
