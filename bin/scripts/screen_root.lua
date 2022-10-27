@@ -89,7 +89,7 @@ vignette.tex = vig_tex
 vignette.x = 0
 vignette.y = 0
 vignette.w = 800
-vignette.h = 600
+vignette.h = 800
 vignette.ax = 0.0
 vignette.ay = 0.0
 
