@@ -13,7 +13,7 @@
 #include "sol.hpp" 
 #include "raylib.h"
 #include "deaf_audio.hpp"
-#include "deaf_vtypes.hpp"
+#include "deaf_lua.hpp"
 #include "deaf_utils.hpp"
 
 inline unsigned int S_WIDTH = 800;
@@ -21,7 +21,6 @@ inline unsigned int S_HEIGHT = 600;
 inline unsigned int S_HEIGHT_T = 680;
 inline int g_div = 8;
 
-inline sol::state lua;
 inline std::mutex mtx_fps;
 
 inline std::vector<Texture2D> textures_in_script;

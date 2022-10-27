@@ -1,21 +1,5 @@
 #include "deaf.hpp"
 
-
-Vector2 DrawString(std::string str ,float x, float y, float s, Color c, float anchorX, float anchorY, Font f)
-{
-	Vector2 bounds = MeasureTextEx(f,str.c_str(),s,0);
-	Vector2 pos = {x - bounds.x*anchorX, y- bounds.y*anchorY};
-	DrawTextEx(f,str.c_str(), pos, s, 0, c);
-	return bounds;
-}
-
-
-VSequence::~VSequence(){
-    for(auto a : actions) delete a;
-    actions.clear();
-}
-
-
 void VElement::drawBoundBox(){
     float xx = x - w*a_x;
     float yy = y - h*a_y;
@@ -58,12 +42,93 @@ void VElement::draw(){
     
     DrawRectangle(xx,yy, w, h, col);
 };
-
-
-
-VImage::~VImage() {
-    UnloadTexture(tex);
+void VElement_bind(){
+    auto elem = lua.new_usertype<VElement>("VElement");
+    elem["id"] = sol::property([](VElement* v) -> unsigned long {return v->id;});
+	elem["x"] = &VElement::x;
+	elem["y"] = &VElement::y;
+	elem["w"] = &VElement::w;
+	elem["h"] = &VElement::h;
+	elem["ax"] = &VElement::a_x;
+	elem["ay"] = &VElement::a_y;
+	elem["gx"] = sol::property([](VElement* v, float gx){v->x = gx*(float(S_WIDTH)/float(g_div));});
+	elem["gy"] = sol::property([](VElement* v, float gy){v->y = gy*(float(S_HEIGHT)/float(g_div));});
+	elem["r"] = sol::property([](VElement* v){return v->col.r;}, [](VElement* v, float r){v->col.r = r;});
+	elem["g"] = sol::property([](VElement* v){return v->col.g;}, [](VElement* v, float g){v->col.g = g;});
+	elem["b"] = sol::property([](VElement* v){return v->col.b;}, [](VElement* v, float b){v->col.b = b;});
+	elem["a"] = sol::property([](VElement* v){return v->col.a;}, [](VElement* v, float a){v->col.a = a;});
+	elem["hue"] = sol::property([](VElement* v, float h){v->col = hueToHSV(h);});
+    elem["tag"] = &VElement::tag;
+	elem["focus"] = sol::property([](VElement* v, bool a){
+    	int i=1;
+        for(auto e : elements){
+    		e->focus = false;
+            if(e == v) lua["focus_idx"] = i;
+            i++;
+    	} 
+        v->focus = true;
+    });
+    lua_visuals["addVElement"] = []() -> VElement* { 
+		auto l = new VElement();
+		elements.push_back(l);
+		return l;
+	};
 }
+
+
+
+void VLabel::draw() {
+    if(w == 0 or h == 0) return;
+    if(text.size() == 0) return;
+    if(font < 0 )font = 0;
+    if(font >= fonts.size()) font = fonts.size()-1;
+    
+    auto ss = MeasureTextEx(fonts[font],text.c_str(),size,0.f);
+    w = ss.x;
+    h = ss.y;
+    float xx = x - w*a_x;
+    float yy = y - h*a_y;
+    DrawTextEx(fonts[font], text.c_str(), {xx,yy}, size, 0 , WHITE);
+};
+void VLabel_bind(){
+    auto lbl = lua.new_usertype<VLabel>("VLabel",sol::base_classes, sol::bases<VElement>());
+	lbl["text"] = &VLabel::text;
+	lbl["size"] = &VLabel::size;
+	lbl["font"] = &VLabel::font;
+    lua_visuals["addVLabel"] = [](std::string s) -> VLabel* { 
+		auto l = new VLabel();
+		l->text = s;
+		elements.push_back(l);
+		return l;
+	};
+}
+
+
+
+void VButton::draw()  {	
+    float xx = x - w*a_x;
+    float yy = y - h*a_y;	
+    Rectangle r = {xx,yy,w,h};
+    DrawRectangleLines(xx,yy,w,h,WHITE);
+    DrawRectangle(xx+2,yy+2,w-4,h-4,(state ? WHITE : col));
+    if(selected) DrawRectangleLines(xx-2,yy-2,w+4,h+4,WHITE);
+}
+void VButton_bind(){
+    auto btn = lua.new_usertype<VButton>("VButton",sol::base_classes, sol::bases<VElement>());
+	btn["selected"] = &VButton::selected;
+	btn["action"] = sol::property([](VButton* b, std::function<void(void)> f){b->onPress = f;});
+	btn["release"] = sol::property([](VButton* b, std::function<void(void)> f){b->onRelease = f;});
+	btn["state"] = sol::property([](VButton* b)->bool{return b->state;}, [](VButton* b, bool s){ b->state = s; if(b->onPress and s) b->onPress(); });
+	btn["onPress"] = [](VButton* b){b->onPress();};
+	btn["onRelease"] = [](VButton* b){b->onRelease();};
+    lua_visuals["addVButton"] = [](sol::function f) -> VButton* { 
+		auto l = new VButton();
+		l->onPress = f;
+		elements.push_back(l);
+		return l;
+	};
+}	
+
 
 void VImage::SetTexture(Texture2D t){
     tex = t;
@@ -87,10 +152,24 @@ void VImage::draw() {
             Rectangle{sx,sy,sw,sh},
             Rectangle{x - w*a_x, y - h*a_y, w, h},
             Vector2{0,0},0,WHITE);
-
-    
     }
 };
+void VImage_bind(){
+    lua.new_usertype<Texture2D>("VTexture");
+	auto image = lua.new_usertype<VImage>("VImage",sol::base_classes, sol::bases<VElement>());
+	image["tex"] = sol::property(&VImage::SetTexture);
+	image["tiles_count_x"] = &VImage::tmx;
+	image["tiles_count_y"] = &VImage::tmy;
+	image["tile_x"] = &VImage::tx;
+	image["tile_y"] = &VImage::ty;
+    lua_visuals["addVImage"] = []() -> VImage* { 
+		auto l = new VImage();
+		elements.push_back(l);
+		return l;
+	};
+}
+
+
 
 VObject::VObject(std::string path){
     model = LoadModel(path.c_str());
@@ -101,53 +180,31 @@ VObject::~VObject(){
 void VObject::draw(){
     DrawModelEx(model,{x,y,z},{ax_x,ax_y,ax_z},ax_angle,{scale,scale,scale},col);
 }
-
-void VLabel::draw() {
-    if(w == 0 or h == 0) return;
-    if(text.size() == 0) return;
-    if(font < 0 )font = 0;
-    if(font >= fonts.size()) font = fonts.size()-1;
-    
-    auto ss = MeasureTextEx(fonts[font],text.c_str(),size,0.f);
-    w = ss.x;
-    h = ss.y;
-    float xx = x - w*a_x;
-    float yy = y - h*a_y;
-    DrawTextEx(fonts[font], text.c_str(), {xx,yy}, size, 0 , WHITE);
-};
-
-
-void VButton::draw()  {	
-    float xx = x - w*a_x;
-    float yy = y - h*a_y;	
-    Rectangle r = {xx,yy,w,h};
-    DrawRectangleLines(xx,yy,w,h,WHITE);
-    DrawRectangle(xx+2,yy+2,w-4,h-4,(state ? WHITE : col));
-    if(selected) DrawRectangleLines(xx-2,yy-2,w+4,h+4,WHITE);
-}	
-//void onPress();
-
-
-void VTimer::draw() {
-    float p = progress;
-    if(p > 1.0) p = 1.0;
-    if(p < 0.0) p = 0.0;
-    
-    float xx = x - w*a_x;
-    float yy = y - h*a_y;
-    
-    if(border)DrawRectangleLines(xx,yy,w,h,col);
-    
-    if(circle){
-            BeginScissorMode(xx,yy,w,h);
-            DrawCircleSector({xx + w/2,yy + h/2}, std::max(w,h), 180, (invert ? -180 : 180) - 360*progress, 32, col);
-            EndScissorMode();
-    }
-    else{
-        if(not invert)
-        DrawRectangle(xx,yy,w*p,h,col);
-        else
-        DrawRectangle(xx + w-(w*p),yy,(w*p),h,col);
-    }
-    
+void VObject_bind(){
+	auto obj = lua.new_usertype<VObject>("VObject",sol::base_classes, sol::bases<VElement>());
+    obj["z"] = &VObject::z;
+    obj["az"] = &VObject::a_z;
+    obj["axis_x"] = &VObject::ax_x;
+    obj["axis_z"] = &VObject::ax_z;
+    obj["axis_y"] = &VObject::ax_y;
+    obj["axis_angle"] = &VObject::ax_angle;
+    obj["scale"] = &VObject::scale;
+    lua_visuals["addVObject"] = [](std::string model_path) -> VObject* {
+        auto m = new VObject(model_path);
+        objects.push_back(m);
+        return m;
+    };
+	
 }
+
+
+
+
+void lua_Vbind(){
+    VElement_bind();
+    VButton_bind();
+    VLabel_bind();
+    VImage_bind();
+    VObject_bind();
+}
+
