@@ -1,4 +1,7 @@
 #pragma once
+
+#define VER "S/W/D/2"
+
 #include <vector>
 #include <chrono>
 #include <iostream>
