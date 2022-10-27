@@ -380,43 +380,51 @@ void screen()
 }
 
 float dt = 0.f;
+bool paused = false;
 void pollCtrl()
 {
+	if(IsKeyPressed(KEY_ENTER)){
+		paused = !paused;
+		if(paused) ShowCursor();
+		else DisableCursor();
+	}
 	dt += 1.f/60.f;
-    if(IsKeyPressed(KEY_W)){
-        libpd_bang("walk_start");
-    }
-    if(IsKeyReleased(KEY_W)){
-        libpd_bang("walk_stop");
-    }
-    if(IsKeyPressed(KEY_S)){
-        libpd_bang("walk_start");
-    }
-    if(IsKeyReleased(KEY_S)){
-        libpd_bang("walk_stop");
-    } 
-    if(IsKeyDown(KEY_W)) {
-        puppet.cam.position.z += 0.06f*std::cos(puppet.rot.x);
-        puppet.cam.position.x += 0.06f*std::sin(puppet.rot.x);
-        puppet.cam.position.y = 1.5f + 0.04f*std::sin(dt*6.f);//head bop
-    }
-    if(IsKeyDown(KEY_S)) {
-        puppet.cam.position.z -= 0.03f*std::cos(puppet.rot.x);
-        puppet.cam.position.x -= 0.03f*std::sin(puppet.rot.x);
-        puppet.cam.position.y = 1.5f + 0.02f*std::sin(dt*6.f);//head bop
-    }
-    // if(IsKeyDown(KEY_A)) {
-    //     puppet.rot.x += (2.0f/360.0f)*2.0f*3.1415f;
-    // }
-    // if(IsKeyDown(KEY_D)) {
-    //     puppet.rot.x -= (2.0f/360.0f)*2.0f*3.1415f;
-    // }
-	puppet.cam.target.x = puppet.cam.position.x + std::sin(puppet.rot.x);
-	puppet.cam.target.z = puppet.cam.position.z + std::cos(puppet.rot.x);
-	puppet.cam.target.y = puppet.cam.position.y + puppet.rot.y;
-	puppet.rot.x = ((puppet.mpos.x / float(S_WIDTH)) - 0.5) * -3.1415;
-	puppet.rot.y = ((puppet.mpos.y / float(S_HEIGHT)) - 0.5) * -3.1415;
-	std::clamp(puppet.rot.y, 0.f, 1.f);
+    if(puppet.active and not paused){
+		if(IsKeyPressed(KEY_W)){
+			libpd_bang("walk_start");
+		}
+		if(IsKeyReleased(KEY_W)){
+			libpd_bang("walk_stop");
+		}
+		if(IsKeyPressed(KEY_S)){
+			libpd_bang("walk_start");
+		}
+		if(IsKeyReleased(KEY_S)){
+			libpd_bang("walk_stop");
+		} 
+		if(IsKeyDown(KEY_W)) {
+			puppet.cam.position.z += 0.06f*std::cos(puppet.rot.x);
+			puppet.cam.position.x += 0.06f*std::sin(puppet.rot.x);
+			puppet.cam.position.y = 1.5f + 0.04f*std::sin(dt*6.f);//head bop
+		}
+		if(IsKeyDown(KEY_S)) {
+			puppet.cam.position.z -= 0.03f*std::cos(puppet.rot.x);
+			puppet.cam.position.x -= 0.03f*std::sin(puppet.rot.x);
+			puppet.cam.position.y = 1.5f + 0.02f*std::sin(dt*6.f);//head bop
+		}
+		// if(IsKeyDown(KEY_A)) {
+		//     puppet.rot.x += (2.0f/360.0f)*2.0f*3.1415f;
+		// }
+		// if(IsKeyDown(KEY_D)) {
+		//     puppet.rot.x -= (2.0f/360.0f)*2.0f*3.1415f;
+		// }
+		puppet.cam.target.x = puppet.cam.position.x + std::sin(puppet.rot.x);
+		puppet.cam.target.z = puppet.cam.position.z + std::cos(puppet.rot.x);
+		puppet.cam.target.y = puppet.cam.position.y + puppet.rot.y;
+		puppet.rot.x = ((puppet.mpos.x / float(S_WIDTH)) - 0.5) * -3.1415;
+		puppet.rot.y = ((puppet.mpos.y / float(S_HEIGHT)) - 0.5) * -3.1415;
+		std::clamp(puppet.rot.y, 0.f, 1.f);
+	}
 	
 	auto m = GetMousePosition();
 	auto aa = 0.1f; //floatiness of camera

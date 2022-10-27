@@ -199,7 +199,9 @@ void VObject_bind(){
 
 void VPlayer_bind(){
     auto lua_player = lua["player"].get_or_create<sol::table>();
-    lua_player["active"] = &puppet.active;
+    lua_player["active"] = sol::property([=](bool state){
+        puppet.active = state;
+    });
 }
 
 
