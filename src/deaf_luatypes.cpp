@@ -115,20 +115,15 @@ void lua_init(){
     };
 
 
-    lua_control["shift"] = (int)0;
-    lua_control["ev_vel"] = (int)0;
-    lua_control["ev_note_on"] = MidiBytes::on;
-    lua_control["ev_note_off"] = MidiBytes::off;
-    lua_control["ev_note_cc"] = MidiBytes::cc;
-    lua_control["map"].get_or_create<sol::table>();
-    lua_control["map"][0x90].get_or_create<sol::table>();
-    lua_control["map"][0x80].get_or_create<sol::table>();
-    lua_control["map"][0xA0].get_or_create<sol::table>();
-    lua_control["unitmap"].get_or_create<sol::table>();
-    lua_control["unitmap"][0x90].get_or_create<sol::table>();
-    lua_control["unitmap"][0x80].get_or_create<sol::table>();
-    lua_control["unitmap"][0xA0].get_or_create<sol::table>();
-    lua_control["units"].get_or_create<sol::table>();
+    // lua_control["map"].get_or_create<sol::table>();
+    // lua_control["map"][0x90].get_or_create<sol::table>();
+    // lua_control["map"][0x80].get_or_create<sol::table>();
+    // lua_control["map"][0xA0].get_or_create<sol::table>();
+    // lua_control["unitmap"].get_or_create<sol::table>();
+    // lua_control["unitmap"][0x90].get_or_create<sol::table>();
+    // lua_control["unitmap"][0x80].get_or_create<sol::table>();
+    // lua_control["unitmap"][0xA0].get_or_create<sol::table>();
+    // lua_control["units"].get_or_create<sol::table>();
     lua_control["focus_idx"] = (int)0;
     lua_control["navigables"].get_or_create<sol::table>();
     lua_control["navigate"] = [=](){
@@ -166,12 +161,6 @@ void lua_init(){
 
     };
 
-
-	lua_visuals["createTexture"] = [](std::string t) -> Texture2D {
-		auto tex = LoadTexture((t).c_str());
-		textures_in_script.push_back(tex);
-		return tex;
-	};
 	
     lua_visuals["removeVObject"] = [](VObject* l){
         objects.erase(std::remove_if(

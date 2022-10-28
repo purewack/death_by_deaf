@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 #include "raylib.h"
 inline sol::state lua;
 inline sol::table lua_system;
@@ -73,15 +74,25 @@ struct VButton : public VElement {
 	//void onPress();
 };
 
+struct VTexture {
+	Texture2D texture;
+	std::string filename;
+};
+
+struct VModel {
+	Model mesh;
+	std::string filename;
+};
 
 struct VImage : public VElement {
-	Texture2D tex;
+	VTexture tex;
 	int tmx, tmy = 1;
 	int tx, ty = 0;
 	
+	VImage(std::string tex);
 	virtual ~VImage(){};
 
-	void SetTexture(Texture2D t);
+	void SetTexture(std::string t);
 
 	void draw() override;
 };
@@ -94,11 +105,12 @@ struct VObject : public VElement {
 	float ax_y = 0.f;
 	float ax_angle = 0.f;
 	float scale = 1.f;
-	Model model;
+	VModel model;
 	void draw() override;
 
 	VObject(std::string path);
-	virtual ~VObject();
+	virtual ~VObject(){};
+	void SetModel(std::string filename);
 };
 
 struct VPlayer

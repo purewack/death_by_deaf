@@ -69,3 +69,28 @@ void audio_end()
         }
         if ( adac.isStreamOpen() ) adac.closeStream();
 }
+
+void VAudio_bind(){
+    lua_audio["send_bang"] = [](std::string who){ 
+		libpd_bang(who.c_str());
+	};
+    lua_audio["send_float"] = [](std::string who, float v){ 
+		libpd_float(who.c_str(),v);
+	};
+    lua_audio["send_symbol"] = [](std::string who, std::string sym){ 
+		libpd_symbol(who.c_str(),sym.c_str());
+	};
+    // lua_audio["editor"] = [](){
+    //     audio_editor = !audio_editor;
+    //     if(audio_editor){
+    // #ifdef __APPLE__
+    //     libpd_start_gui("/Applications/puredata.app/Contents/Resources/");
+    // #else
+    //     ERROR("unsupported platform for PD instance editor");
+    // #endif
+    //     }
+    //     else{
+    //     libpd_stop_gui();
+    //     }
+    // };
+}

@@ -130,10 +130,32 @@ void VButton_bind(){
 }	
 
 
-void VImage::SetTexture(Texture2D t){
-    tex = t;
-    w = tex.width;
-    h = tex.height;
+void VImage::SetTexture(std::string filename){
+    VTexture found_tex = {0};
+    bool found = false;
+
+    for(auto t : textures_in_script){
+        if(t.filename == filename){
+            found_tex = t;
+            found = true;
+            break;
+        }
+    }
+
+    if(found)
+        tex = found_tex;
+    else{
+        tex.texture = LoadTexture(filename.c_str());
+        tex.filename = filename;
+        textures_in_script.push_back(tex);
+    }
+}
+
+
+VImage::VImage(std::string s){
+    VImage::SetTexture(s);
+    w = tex.texture.width;
+    h = tex.texture.height;
     tmx = 1;
     tmy = 1;
     tx = 0;
@@ -142,43 +164,58 @@ void VImage::SetTexture(Texture2D t){
 
 void VImage::draw() {
     //VElement::draw();
-    if(tex.id){
-        float sw = tex.width/tmx;
-        float sh = tex.height/tmy;
+    if(tex.texture.id){
+        float sw = tex.texture.width/tmx;
+        float sh = tex.texture.height/tmy;
         float sx = sw*tx;
         float sy = sw*ty;
     
-        DrawTexturePro(tex,
+        DrawTexturePro(tex.texture,
             Rectangle{sx,sy,sw,sh},
             Rectangle{x - w*a_x, y - h*a_y, w, h},
             Vector2{0,0},0,WHITE);
     }
 };
 void VImage_bind(){
-    lua.new_usertype<Texture2D>("VTexture");
-	auto image = lua.new_usertype<VImage>("VImage",sol::base_classes, sol::bases<VElement>());
-	image["tex"] = sol::property(&VImage::SetTexture);
+    auto image = lua.new_usertype<VImage>("VImage",sol::base_classes, sol::bases<VElement>());
+	image["texture"] = sol::property(&VImage::SetTexture);
 	image["tiles_count_x"] = &VImage::tmx;
 	image["tiles_count_y"] = &VImage::tmy;
 	image["tile_x"] = &VImage::tx;
 	image["tile_y"] = &VImage::ty;
-    lua_visuals["addVImage"] = []() -> VImage* { 
-		auto l = new VImage();
+    lua_visuals["addVImage"] = [](std::string tex) -> VImage* { 
+		auto l = new VImage(tex);
 		elements.push_back(l);
 		return l;
 	};
 }
 
 
+void VObject::SetModel(std::string filename){
+    VModel found_m = {0};
+    bool found = false;
 
-VObject::VObject(std::string path){
-    model = LoadModel(path.c_str());
+    for(auto m : models_in_script){
+        if(m.filename == filename){
+            found_m = m;
+            found = true;
+            break;
+        }
+    }
+
+    if(found)
+        model = found_m;
+    else{
+        model.mesh = LoadModel(filename.c_str());
+        model.filename = filename;
+        models_in_script.push_back(model);
+    }
 }
-VObject::~VObject(){
-    UnloadModel(model);
+VObject::VObject(std::string path){
+    VObject::SetModel(path);
 }
 void VObject::draw(){
-    DrawModelEx(model,{x,y,z},{ax_x,ax_y,ax_z},ax_angle,{scale,scale,scale},col);
+    DrawModelEx(model.mesh,{x,y,z},{ax_x,ax_y,ax_z},ax_angle,{scale,scale,scale},col);
 }
 void VObject_bind(){
 	auto obj = lua.new_usertype<VObject>("VObject",sol::base_classes, sol::bases<VElement>());
@@ -212,5 +249,6 @@ void lua_Vbind(){
     VImage_bind();
     VObject_bind();
     VPlayer_bind();
+    VAudio_bind();
 }
 

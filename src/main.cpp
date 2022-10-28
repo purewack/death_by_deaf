@@ -74,9 +74,13 @@ void script(){
 	elements.clear();
 	actions.clear();
 	for(auto t: textures_in_script){
-		UnloadTexture(t);
+		UnloadTexture(t.texture);
+	}
+	for(auto m: models_in_script){
+		UnloadModel(m.mesh);
 	}
 	textures_in_script.clear();
+	models_in_script.clear();
     lua["control"]["navigables"] = nullptr;
 	lua["visuals"]["onUIReload"]();	
     
@@ -383,6 +387,9 @@ float dt = 0.f;
 bool paused = false;
 void pollCtrl()
 {
+	if(audio_editor)
+		libpd_poll_gui();
+
 	if(IsKeyPressed(KEY_ENTER)){
 		paused = !paused;
 		if(paused) ShowCursor();

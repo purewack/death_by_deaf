@@ -26,7 +26,8 @@ inline int g_div = 8;
 
 inline std::mutex mtx_fps;
 
-inline std::vector<Texture2D> textures_in_script;
+inline std::vector<VTexture> textures_in_script;
+inline std::vector<VModel> models_in_script;
 inline std::vector<std::string> chain; //script nav chain
 inline std::vector<std::string> mevents; //midi events
 inline std::string current_script;
