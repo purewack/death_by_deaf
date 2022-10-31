@@ -236,9 +236,59 @@ void VObject_bind(){
 
 void VPlayer_bind(){
     auto lua_player = lua["player"].get_or_create<sol::table>();
-    lua_player["active"] = sol::property([=](bool state){
+    lua_player["setActive"] = [=](bool state){
         puppet.active = state;
-    });
+    };
+    lua_player["getPos"] = [=](){
+        return std::make_tuple(
+            puppet.cam.position.x,
+            puppet.cam.position.y,
+            puppet.cam.position.z
+        );
+    };
+    lua_player["setPos"] = [=](float x, float y, float z){
+        puppet.cam.position.x = x;
+        puppet.cam.position.y = y;
+        puppet.cam.position.z = z;
+    };
+    lua_player["getLook"] = [=](){
+        return std::make_tuple(
+            puppet.cam.target.x,
+            puppet.cam.target.y,
+            puppet.cam.target.z
+        );
+    };
+    lua_player["setLook"] = [=](float x, float y, float z){
+        puppet.cam.target.x = x;
+        puppet.cam.target.y = y;
+        puppet.cam.target.z = z;
+    };
+    lua_player["getMouse"] = [=](){
+        return std::make_tuple(
+            puppet.mpos.x,
+            puppet.mpos.y,
+            puppet.mpos_new.x,
+            puppet.mpos_new.y
+        );
+    };
+    lua_player["setMouse"] = [=](float x, float y){
+        puppet.mpos.x = x;
+        puppet.mpos.y = y;
+    };
+    lua_player["getRotation"] = [=](){
+        return std::make_tuple(
+            puppet.rot.x,
+            puppet.rot.y
+        );
+    };
+    lua_player["setRotation"] = [=](float x, float y){
+        puppet.rot.x = x;
+        puppet.rot.y = y;
+    };
+    
+    lua_player["setFov"] = [=](float v){
+        puppet.cam.fovy = v;
+    };
 }
 
 

@@ -118,11 +118,12 @@ struct VPlayer
 	Camera3D cam;
 	Vector2 rot;
 	Vector2 mpos;
+	Vector2 mpos_new;
 	bool active = true;
 };
 
 
-inline VPlayer puppet;
+inline VPlayer puppet = {0};
 inline std::vector<Font> fonts;
 inline Font ui_font;
 Vector2 DrawString(std::string str ,float x, float y, float s = 16, Color c = WHITE, float anchorX = 0.0f, float anchorY = 0.0f, Font f = ui_font);

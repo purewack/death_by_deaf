@@ -1,6 +1,7 @@
 #pragma once
 
 #define VER "S/W/D/2"
+#define DEBUG
 
 #include <vector>
 #include <chrono>

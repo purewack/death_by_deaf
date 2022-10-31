@@ -114,16 +114,21 @@ void lua_init(){
         lua.script("io.output():close()");
     };
 
-
-    // lua_control["map"].get_or_create<sol::table>();
-    // lua_control["map"][0x90].get_or_create<sol::table>();
-    // lua_control["map"][0x80].get_or_create<sol::table>();
-    // lua_control["map"][0xA0].get_or_create<sol::table>();
-    // lua_control["unitmap"].get_or_create<sol::table>();
-    // lua_control["unitmap"][0x90].get_or_create<sol::table>();
-    // lua_control["unitmap"][0x80].get_or_create<sol::table>();
-    // lua_control["unitmap"][0xA0].get_or_create<sol::table>();
-    // lua_control["units"].get_or_create<sol::table>();
+    lua_control["isKeyDown"] = [=](int key) -> bool {
+        return IsKeyDown(key);
+    };
+    lua_control["isKeyUp"] = [=](int key) -> bool {
+        return IsKeyUp(key);
+    };
+    lua_control["isKeyPressed"] = [=](int key) -> bool {
+        return IsKeyPressed(key);
+    }; 
+    lua_control["isKeyReleased"] = [=](int key) -> bool {
+        return IsKeyReleased(key);
+    };
+    lua_control["getKeyPressed"] = [=]() -> int {
+        return GetKeyPressed();
+    };
     lua_control["focus_idx"] = (int)0;
     lua_control["navigables"].get_or_create<sol::table>();
     lua_control["navigate"] = [=](){
@@ -343,6 +348,13 @@ void lua_init(){
 	lua_visuals["message"] = [](std::string msg){
 		message_text = msg;
 		message_timer = std::chrono::duration_cast<fpstime>(std::chrono::seconds{2});
+	};
+
+    lua_visuals["mouse"] = [](bool state){
+        if(state)
+            EnableCursor();
+        else
+            DisableCursor();
 	};
 
     lua_Vbind();
