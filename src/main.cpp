@@ -44,9 +44,6 @@ void init()
 		60
 		#endif
 	);
-	#ifndef DEBUG
-	ToggleFullscreen();
-	#endif
 
 	lua_init();
 	script();

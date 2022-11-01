@@ -76,6 +76,9 @@ void lua_init(){
 		if(onFrame) onFrame = nullptr;
 		else onFrame = lua["onFrame"];
 	};
+    lua_system["toggleFullscreen"] = [](){
+        ToggleFullscreen();
+	};
     lua_system["push_command"] = [](std::string cmd){
         commands.push_back(cmd);
     };
