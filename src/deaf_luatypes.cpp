@@ -23,7 +23,6 @@ void lua_init(){
 	lua.open_libraries(sol::lib::os);
 	lua["S_W"] = S_WIDTH;
 	lua["S_H"] = S_HEIGHT;
-	lua["S_HT"] = S_HEIGHT_T;
 	lua.require_file("json","scripts/json.lua");
 	
     lua_system = lua["system"].get_or_create<sol::table>();

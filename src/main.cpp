@@ -1,7 +1,7 @@
 #include "deaf.hpp"
 
 void init();
-void pollCtrl();
+void tickThread();
 void screen();
 void script();
 
@@ -12,17 +12,17 @@ int main(int argc, char* argv[])
     audio_init();
 
     static std::atomic_bool running = true;
-    std::thread thread_input([=](){
+    std::thread thread_tick([=](){
         while(running){
-            pollCtrl();
-            usleep(16666);
+            tickThread();
+            usleep(TICK_TIME);
         }
     });
 
     screen();
     
     running = false;
-    thread_input.join();
+    thread_tick.join();
     audio_end();
 
 	return 0;
@@ -36,7 +36,7 @@ void init()
 	commands.push_back("");
 	command = "";
 	
-	InitWindow(S_WIDTH,S_HEIGHT_T,"DEAF Engine");
+	InitWindow(S_WIDTH,S_HEIGHT,"DEAF Engine");
 	SetTargetFPS(
 		#ifdef WIN32
 		120
@@ -254,18 +254,18 @@ void do_console()
 			if(c != '`')
 			command += c;
 		}
+		
+		DrawRectangle(16,0,S_WIDTH-32,16,(in_console ? DARKGRAY : (IS_SHIFT_DOWN ? RED : BLACK)));
+		DrawString("->" + command,16,0);
+		if(not in_console)DrawRectangleLines(16,0,S_WIDTH-32,16,DARKGRAY);	
 	}
 
-	DrawRectangle(16,S_HEIGHT,S_WIDTH-32,16,(in_console ? DARKGRAY : (IS_SHIFT_DOWN ? RED : BLACK)));
-	DrawString("->" + command,16,S_HEIGHT);
-	if(not in_console)DrawRectangleLines(16,S_HEIGHT,S_WIDTH-32,16,DARKGRAY);	
-	
 	if(IsKeyPressed(KEY_GRAVE)) in_console = not in_console;
-
 }
 
 void screen()
 {
+	static long dt = 0;
 	//SetTraceLogLevel(LOG_ERROR);
     std::cout << "[gfx]" << std::endl;
     time_ac_old = time_ac_now = std::chrono::high_resolution_clock::now();
@@ -296,8 +296,8 @@ void screen()
         }
 
         if(not message_text.empty() and message_timer.count() > 0){
-            DrawRectangle(0,0,640,64,{255,255,255,64});
-            DrawString(message_text,320,32,32,WHITE,0.5,0.5);
+            DrawRectangle(0,S_HEIGHT-64,S_WIDTH,64,{255,255,255,64});
+            DrawString(message_text,S_WIDTH>>1,S_HEIGHT-32,1.f,WHITE,0.5f,0.5f);
             message_timer -= fpstime{1};
         }
 
@@ -374,48 +374,61 @@ void screen()
 
         EndDrawing();
 
+
         {
         std::lock_guard<std::mutex> lg(mtx_fps);
+		if(not in_console){
+			puppet.mpos_new = GetMousePosition();
+			if(lua_system["onInputPoll"] != sol::lua_nil)
+			lua_system["onInputPoll"](GetFrameTime()*1000.f);
+		}
         check_script();
         }
 	}
 	CloseWindow();
 }
 
-float dt = 0.f;
-bool paused = false;
-void pollCtrl()
+void tickThread()
 {
+	static long t = 0;
+	{
+        std::lock_guard<std::mutex> lg(mtx_fps);
+		if(not in_console){
+			if(lua_system["onEngineTick"] != sol::lua_nil)
+			lua_system["onEngineTick"](t);
+			t++;
+		}
+    }
+	
+	
 	// if(audio_editor)
 	// 	libpd_poll_gui();
 
-	auto m = GetMousePosition();
-	puppet.mpos_new = m;
-    std::lock_guard<std::mutex> lg(mtx_fps);
-	bool bb = IsMouseButtonDown(0);
-	static bool bo;
-	for(auto e : elements)
-	{
-		if(VButton* b = dynamic_cast<VButton*>(e))
-		{	
-			float xx = b->x - b->w*b->a_x;
-			float yy = b->y - b->h*b->a_y;
-			auto r = Rectangle{xx,yy,b->w,b->h};
-			if(CheckCollisionPointRec(m,r)){				
-                if(not b->state and bb and not bo)
-                {
-				    b->state = bb;
-                    if(b->onPress) b->onPress();
-				}
-                else if(b->state and not bb and bo){
-				    b->state = bb;
-                    if(b->onRelease) b->onRelease();
-                }
-			}
-		}
-	}
-	bo = bb;
+	// auto m = GetMousePosition();
+	// puppet.mpos_new = m;
+    // std::lock_guard<std::mutex> lg(mtx_fps);
+	// bool bb = IsMouseButtonDown(0);
+	// static bool bo;
+	// for(auto e : elements)
+	// {
+	// 	if(VButton* b = dynamic_cast<VButton*>(e))
+	// 	{	
+	// 		float xx = b->x - b->w*b->a_x;
+	// 		float yy = b->y - b->h*b->a_y;
+	// 		auto r = Rectangle{xx,yy,b->w,b->h};
+	// 		if(CheckCollisionPointRec(m,r)){				
+    //             if(not b->state and bb and not bo)
+    //             {
+	// 			    b->state = bb;
+    //                 if(b->onPress) b->onPress();
+	// 			}
+    //             else if(b->state and not bb and bo){
+	// 			    b->state = bb;
+    //                 if(b->onRelease) b->onRelease();
+    //             }
+	// 		}
+	// 	}
+	// }
+	// bo = bb;
 
-	if(not in_console)
-	lua_system["onLogicLoop"]();
 }

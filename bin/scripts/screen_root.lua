@@ -1,4 +1,5 @@
 visuals.floor(true)
+visuals.mouse(false)
 
 vignette = visuals.addVImage("gfx/vig.png")
 vignette.x = 0
@@ -34,31 +35,31 @@ end
 player.setPos(0,1.5,0)
 player.setLook(0,1.5,0)
 player.setRotation(0,0)
-player.setFov(45)
+player.setFov(90)
 
-system.onLogicLoop = function()
+system.onEngineTick = function(dt)
+    print("onTick")
+end
+
+system.onInputPoll = function(dt)
     
+    print(dt)
     local aa = 0.1 --floatiness of camera
     local walk_speed = 0.04
-    -- if(IsKeyPressed(KEY_ENTER)){
-	-- 	paused = !paused;
-	-- 	if(paused or in_console) ShowCursor();
-	-- 	else DisableCursor();
-	-- }
-	-- dt += 1.f/60.f;
 
-    -- if(puppet.active and not paused and not in_console){
     px,py,pz = player.getPos()
     lx,ly,lz = player.getLook()
     rx,ry = player.getRotation()
     mx,my,nx,ny = player.getMouse()
 
-    if control.isKeyPressed(87) or control.isKeyPressed(83) then
+    if control.isKeyPressed(87) then
         audio.send_bang("walk_start")
+        bb.state = true
     end
     
-    if control.isKeyReleased(87) or control.isKeyPressed(83) then
+    if control.isKeyReleased(87)  then
         audio.send_bang("walk_stop")
+        bb.state = false
     end
 
     if control.isKeyDown(87) then --W key

@@ -20,9 +20,9 @@
 #include "deaf_lua.hpp"
 #include "deaf_utils.hpp"
 
+inline unsigned int TICK_TIME = 16666; //30tick / sec
 inline unsigned int S_WIDTH = 800;
 inline unsigned int S_HEIGHT = 600;
-inline unsigned int S_HEIGHT_T = 680;
 inline int g_div = 8;
 
 inline std::mutex mtx_fps;
