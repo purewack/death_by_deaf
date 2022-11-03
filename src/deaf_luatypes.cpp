@@ -13,8 +13,20 @@ VSequence::~VSequence(){
     actions.clear();
 }
 
+int lua_log_ex(lua_State* L, sol::optional<const std::exception&> maybe_exception, sol::string_view description) {
+	
+    std::cout << "Script: An exception occurred in a function ";
+	if (maybe_exception) {
+		const std::exception& ex = *maybe_exception;
+		printLog(ex.what());
+	}
+
+	return sol::stack::push(L, description);
+}
+
 void lua_init(){
-    
+    lua.set_exception_handler(lua_log_ex);
+
 	lua.open_libraries(sol::lib::base);
 	lua.open_libraries(sol::lib::table);
 	lua.open_libraries(sol::lib::string);

@@ -51,14 +51,19 @@ void init()
 	puppet.cam = { { 0.0f, 1.5f, 0.0f }, { 0.0f, 1.5f, 1.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
 }
 
+void printLog(std::string s){
+	loglines.push_back(s);
+	loglines_cursor = loglines.size();
+}
+
 void execCommand(){
-	try{
-		lua.script(command);
-		//LOG("{"+command+"}");
+	
+	auto cmdres = lua.script(command, [](lua_State*, sol::protected_function_result pfr) {return pfr;});
+	if(!cmdres.valid()){
+		printLog("Invalid command [" + command + "]");
 	}
-	catch(std::exception ex){
-		ERROR("Invalid command : " + command);
-	}	
+	else
+		printLog(command);
 	commands.push_back(command);
 	command = "";
 	cmd_index = commands.size();
@@ -81,30 +86,41 @@ void script(){
 	textures_in_script.clear();
 	models_in_script.clear();
     lua["control"]["navigables"] = nullptr;
-	lua["visuals"]["onUIReload"]();	
+	// if(lua_visuals["onUIReload"])
+		lua_visuals["onUIReload"]();	
     
 	//load screen script
 	try{		
 		auto sc = lua.load_file(chain.back());
-		auto result = sc();
-		script_error = not result.valid();
-		if (result.valid()) {
-            onUIFrame = lua["visuals"]["onUIFrame"];
-			onFrame = lua["visuals"]["onFrame"];
-			LOG("script success");
+		
+		if (sc.valid()) {
+			auto result = sc();
+			if(result.valid()){
+				onUIFrame = lua["visuals"]["onUIFrame"];
+				onFrame = lua["visuals"]["onFrame"];
+				printLog(">>Load script success");
+				in_console = false;
+			}
+			else{
+				in_console = true;
+				printLog("--Script execute error--");
+				sol::error err = result;
+				std::string what = err.what();
+				printLog(what);
+			}
 		}
-		else {
-			// Call failed
-			sol::error err = result;
+		else{
+			in_console = true;
+			printLog("Invalid script");
+			sol::error err = sc;
 			std::string what = err.what();
-			std::cout << "call failed, sol::error::what() is " << what << std::endl;
-			// 'what' Should read 
-			// "Handled this message: negative number detected"
+			printLog(what);
 		}
 	}
 	catch(std::exception ex){
-		script_error = true;
-		LOG("script error");
+		in_console = true;
+		printLog("--Script load exception--");
+		printLog(std::string(ex.what()));
 	}
 	
 	
@@ -272,8 +288,14 @@ void do_console()
 		}
 		
 		DrawRectangle(16,0,S_WIDTH-32,16,(in_console ? DARKGRAY : (IS_SHIFT_DOWN ? RED : BLACK)));
-		DrawString("->" + command,16,0);
+		DrawString("-:" + command,16,0);
 		DrawRectangle(16+(cursor+2)*8,0,8,16,{0,255,255,64});
+		DrawRectangle(16,16,S_WIDTH-32,S_HEIGHT-32,{0,255,255,32});
+		int yy = 16;
+		for(auto s : loglines){
+			DrawString("> " + s,32,yy);
+			yy+=16;	
+		}
 	}
 
 	if(IsKeyPressed(KEY_GRAVE)) in_console = not in_console;
@@ -321,10 +343,6 @@ void screen()
 
         do_grid();
 
-        if(script_error){
-            DrawRectangle(0,0,640,32,GRAY);
-            DrawString("Error in script",0,0,32);
-        }
         if(bench_view){
             std::chrono::nanoseconds total = std::chrono::duration_cast<std::chrono::nanoseconds>(fpstime{1});
             float ratio_fps = float(bench_fps.count()) / float(total.count());

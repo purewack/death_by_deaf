@@ -64,10 +64,13 @@ inline std::chrono::nanoseconds bench_elements;
 inline std::chrono::nanoseconds bench_dsp;
 inline std::chrono::nanoseconds max_dsp;
 
+inline std::vector<std::string> loglines;
+inline int loglines_cursor = 0;
 inline std::vector<std::string> commands;
 inline std::string command;
 inline int cmd_index = 0;
 
+void printLog(std::string msg);
 #define STR(X) std::to_string(X)
 #define LOG(X) std::cout << "[Info] " << X << std::endl; 
 #define ERROR(X) std::cout << "[**Error**] " << X << std::endl;

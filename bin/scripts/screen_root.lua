@@ -1,5 +1,5 @@
 visuals.floor(true)
-visuals.mouse(false)
+--visuals.mouse(false)
 
 vignette = visuals.addVImage("gfx/vig.png")
 vignette.x = 0
@@ -37,13 +37,9 @@ player.setLook(0,1.5,0)
 player.setRotation(0,0)
 player.setFov(90)
 
-system.onEngineTick = function(dt)
-    print("onTick")
-end
 
 system.onInputPoll = function(dt)
     
-    print(dt)
     local aa = 0.1 --floatiness of camera
     local walk_speed = 0.04
 

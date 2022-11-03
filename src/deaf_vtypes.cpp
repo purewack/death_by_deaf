@@ -4,7 +4,7 @@ void VElement::drawBoundBox(){
     float xx = x - w*a_x;
     float yy = y - h*a_y;
     bool hover = (CheckCollisionPointRec(GetMousePosition(),{xx,yy,w,h}));
-    if(hover and IsMouseButtonPressed(0) and IS_SHIFT_DOWN and not in_console) bound_box = not bound_box;
+    if(hover and IsMouseButtonPressed(0) and IS_SHIFT_DOWN) bound_box = not bound_box;
     hover |= focus;
     
     if(hover and IS_SHIFT_DOWN) 
