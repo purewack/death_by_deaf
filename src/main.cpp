@@ -227,19 +227,22 @@ void do_grid()
 
 void do_console()
 {
-	
+	static int cursor = 0;
 	if(in_console){
 		int c = GetCharPressed();
 
 		if(IsKeyPressed(KEY_BACKSPACE) and command.size()){
-			command.pop_back();
+			command.erase(cursor-1,1);
+			cursor--;
 		}
 		else if(IsKeyPressed(KEY_ENTER)){
 			execCommand();
+			cursor = 0;
 		}
 		else if(IsKeyPressed(KEY_UP)){
 			if(cmd_index > 0) cmd_index--;
 			command = commands[cmd_index];
+			cursor = command.size();
 		}
 		else if(IsKeyPressed(KEY_DOWN)){
 			cmd_index++;
@@ -249,15 +252,28 @@ void do_console()
 			}
 			else
 			command = commands[cmd_index];
+			cursor = command.size();
+		}
+		else if(IsKeyPressed(KEY_LEFT)){
+			if(cursor)
+			cursor--;
+		}
+		else if(IsKeyPressed(KEY_RIGHT)){
+			if(cursor < command.size())
+			cursor++;
 		}
 		else if(c){
-			if(c != '`')
-			command += c;
+			if(c != '`'){			
+				std::string ss = "";
+				ss += c;
+				command.insert(cursor,ss);
+				cursor++;
+			}
 		}
 		
 		DrawRectangle(16,0,S_WIDTH-32,16,(in_console ? DARKGRAY : (IS_SHIFT_DOWN ? RED : BLACK)));
 		DrawString("->" + command,16,0);
-		if(not in_console)DrawRectangleLines(16,0,S_WIDTH-32,16,DARKGRAY);	
+		DrawRectangle(16+(cursor+2)*8,0,8,16,{0,255,255,64});
 	}
 
 	if(IsKeyPressed(KEY_GRAVE)) in_console = not in_console;
