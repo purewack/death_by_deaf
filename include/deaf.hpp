@@ -1,6 +1,6 @@
 #pragma once
 
-#define VER "S/W/D/2"
+#define VER "S/W/D/3"
 #define DEBUG
 
 #include <vector>
@@ -35,8 +35,8 @@ inline std::string current_script;
 inline std::vector<VSequence*> actions;
 inline std::vector<VElement*> elements;
 inline std::vector<VObject*> objects;
-inline std::function<void(void)> onFrame = nullptr;
-inline std::function<void(void)> onUIFrame = nullptr;
+inline std::function<void(float)> onFrame = nullptr;
+inline std::function<void(void)> onFrame3D = nullptr;
 using fpstime = std::chrono::duration<int64_t, std::ratio<1,30>>;
 
 inline std::string message_text;

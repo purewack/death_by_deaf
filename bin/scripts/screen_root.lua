@@ -47,14 +47,20 @@ col = false
 system.onEngineTick = function(dt)
     cc = control.isPCollisionObj(door1)
     col = cc
-print(cc)
+
 end
 
 m = false
 
-system.onInputPoll = function(dt)
+visuals.onVideoFrame3D = function()
+    visuals.draw3Dbox(1,1,1,2,2,2)
+end
+
+camera_filter = 0.1
+
+visuals.onVideoFrame = function(dt)
     
-    local aa = 0.1 --floatiness of camera
+    local aa = camera_filter --floatiness of camera
     local walk_speed = 0.04
 
     px,py,pz = player.getPos()
@@ -77,7 +83,7 @@ system.onInputPoll = function(dt)
         bb.state = false
     end
 
-    if control.isKeyDown(87) and not col then --W key
+    if control.isKeyDown(87) then --W key
         pz = pz + walk_speed * math.cos(rx)
         px = px + walk_speed * math.sin(rx)
         -- py = 1.5f + 0.04f*std::sin(dt*6.f) --head bop

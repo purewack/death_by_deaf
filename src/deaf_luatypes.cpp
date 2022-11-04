@@ -388,6 +388,9 @@ void lua_init(){
         col.max.y += oo->y/2;
         return CheckCollisionBoxes(pbox,col);
     };
+    lua_visuals["draw3Dbox"] = [](float x,float y,float z,float sx,float sy,float sz){
+        DrawCubeWires({x,y,z},sx,sy,sz,{0,255,255,255});
+    };
 
     lua_Vbind();
 

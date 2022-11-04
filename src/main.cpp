@@ -72,7 +72,7 @@ void execCommand(){
 
 void script(){
 	onFrame = nullptr;
-	onUIFrame = nullptr;
+    onFrame3D = nullptr;
 	for(auto e : elements) delete e;
 	for(auto a : actions) delete a;
 	elements.clear();
@@ -96,8 +96,8 @@ void script(){
 		if (sc.valid()) {
 			auto result = sc();
 			if(result.valid()){
-				onUIFrame = lua["visuals"]["onUIFrame"];
-				onFrame = lua["visuals"]["onFrame"];
+                onFrame = lua_visuals["onVideoFrame"];
+                onFrame3D = lua_visuals["onVideoFrame3D"];
 				printLog(">>Load script success");
 				in_console = false;
 			}
@@ -206,6 +206,8 @@ void do_objects()
         for(auto o : objects){
             o->draw();
         }
+        if(onFrame3D)
+            onFrame3D();
     EndMode3D();
 }
 
@@ -322,8 +324,11 @@ void screen()
         {
             std::lock_guard<std::mutex> lg(mtx_fps);
             auto timer_frame = new ScopedTimer(&bench_frame);
-            if(onFrame) onFrame();
-            if(onUIFrame) onUIFrame();
+            if(not in_console){
+			    puppet.mpos_new = GetMousePosition();
+			    if(onFrame)
+			    onFrame(GetFrameTime()*1000.f);
+		    }
         }
 
         {
@@ -411,11 +416,6 @@ void screen()
 
         {
         std::lock_guard<std::mutex> lg(mtx_fps);
-		if(not in_console){
-			puppet.mpos_new = GetMousePosition();
-			if(lua_system["onInputPoll"] != sol::lua_nil)
-			lua_system["onInputPoll"](GetFrameTime()*1000.f);
-		}
         check_script();
         }
 	}
