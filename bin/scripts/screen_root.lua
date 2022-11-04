@@ -1,5 +1,4 @@
 visuals.floor(true)
---visuals.mouse(false)
 
 vignette = visuals.addVImage("gfx/vig.png")
 vignette.x = 0
@@ -27,16 +26,31 @@ bb.x = 10
 bb.y = 10
 bb.w = 30
 bb.h = 30
-bb.action = function()
-    player.active = not player.active
-    print(player.active)
-end
+
 
 player.setPos(0,1.5,0)
 player.setLook(0,1.5,0)
 player.setRotation(0,0)
 player.setFov(90)
 
+colind = visuals.addVButton()
+colind.x = S_W-50
+colind.w = 50
+colind.h = 50
+colind.ay = 0
+colind.ay = 0
+colind.hue = 54
+colind.state = false
+
+col = false
+
+system.onEngineTick = function(dt)
+    cc = control.isPCollisionObj(door1)
+    col = cc
+print(cc)
+end
+
+m = false
 
 system.onInputPoll = function(dt)
     
@@ -47,6 +61,11 @@ system.onInputPoll = function(dt)
     lx,ly,lz = player.getLook()
     rx,ry = player.getRotation()
     mx,my,nx,ny = player.getMouse()
+    
+    if control.isKeyPressed(77) then 
+        m = not m    
+        visuals.mouse(m)
+    end    
 
     if control.isKeyPressed(87) then
         audio.send_bang("walk_start")
@@ -58,7 +77,7 @@ system.onInputPoll = function(dt)
         bb.state = false
     end
 
-    if control.isKeyDown(87) then --W key
+    if control.isKeyDown(87) and not col then --W key
         pz = pz + walk_speed * math.cos(rx)
         px = px + walk_speed * math.sin(rx)
         -- py = 1.5f + 0.04f*std::sin(dt*6.f) --head bop

@@ -372,6 +372,22 @@ void lua_init(){
         if(!IsWindowFullscreen() && !state) return;
         ToggleFullscreen();
 	};
+	
+    lua_control["isPCollisionObj"] = [](VObject* oo){
+        auto ppos = puppet.cam.position;
+        BoundingBox pbox = {
+            {ppos.x-0.5,ppos.y,ppos.z-0.5},
+            {ppos.x+0.5,ppos.y+1.5,ppos.z+0.5}
+        };
+        auto col = GetModelBoundingBox(oo->model.mesh);
+        col.min.x -= oo->x/2;
+        col.min.z -= oo->z/2;
+        col.min.y -= oo->y/2;
+        col.max.x += oo->x/2;
+        col.max.z += oo->z/2;
+        col.max.y += oo->y/2;
+        return CheckCollisionBoxes(pbox,col);
+    };
 
     lua_Vbind();
 
