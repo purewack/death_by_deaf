@@ -212,6 +212,7 @@ void VObject::SetModel(std::string filename){
     }
 }
 VObject::VObject(std::string path){
+    if(path == "") return;
     VObject::SetModel(path);
 }
 void VObject::draw(){
@@ -291,6 +292,33 @@ void VPlayer_bind(){
     };
 }
 
+VTrigger::VTrigger() : VObject(""){
+}
+VTrigger::~VTrigger(){
+}
+void VTrigger::draw(){
+    rlPushMatrix();
+        rlTranslatef(x,y,z);
+        rlRotatef(ax_angle,ax_x,ax_y,ax_z);
+        DrawCubeWiresV({0,0,0},{1,1,1},PURPLE);
+    rlPopMatrix();
+}
+void VTrigger_bind(){
+    auto trig = lua.new_usertype<VTrigger>("VTrigger",sol::base_classes, sol::bases<VObject,VElement>());
+    trig["sx"] = &VTrigger::sx;  
+    trig["sy"] = &VTrigger::sy;  
+    trig["sz"] = &VTrigger::sz;
+    trig["onContactBegin"] = &VTrigger::onContactBegin;
+    trig["onContactEnd"] = &VTrigger::onContactEnd;
+    lua_visuals["addVTrigger"] = []() -> VTrigger* {
+        auto t = new VTrigger();
+        objects.push_back(t);
+        return t;
+    };
+    trig["checkCollision"] = [](){
+        
+    };
+}
 
 void lua_Vbind(){
     VElement_bind();
@@ -299,6 +327,7 @@ void lua_Vbind(){
     VImage_bind();
     VObject_bind();
     VPlayer_bind();
+    VTrigger_bind();
     VAudio_bind();
 }
 

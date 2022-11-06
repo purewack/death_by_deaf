@@ -53,7 +53,6 @@ end
 m = false
 
 visuals.onVideoFrame3D = function()
-    visuals.draw3Dbox(1,1,1,2,2,2)
 end
 
 camera_filter = 0.1

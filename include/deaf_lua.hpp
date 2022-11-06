@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "raylib.h"
+#include "rlgl.h"
 inline sol::state lua;
 inline sol::table lua_system;
 inline sol::table lua_visuals;
@@ -99,11 +100,17 @@ struct VImage : public VElement {
 
 struct VObject : public VElement {
 	float z = 0.f;
+	//anchor z
 	float a_z = 0.f;
+
+	//axis of rotation
 	float ax_x = 0.f;
 	float ax_z = 0.f;
 	float ax_y = 0.f;
+	
+	//axis angle
 	float ax_angle = 0.f;
+
 	float scale = 1.f;
 	VModel model;
 	void draw() override;
@@ -122,6 +129,23 @@ struct VPlayer
 	bool active = true;
 };
 
+
+struct VTrigger : public VObject {
+
+	float sx = 1.f;
+	float sy = 1.f;
+	float sz = 1.f;
+
+	VTrigger();
+	virtual ~VTrigger();
+
+	bool contact_old;
+	bool contact_now;
+	std::function<void(void)> onContactBegin;
+	std::function<void(void)> onContactEnd;
+
+	void draw() override;
+};
 
 inline VPlayer puppet = {0};
 inline std::vector<Font> fonts;
