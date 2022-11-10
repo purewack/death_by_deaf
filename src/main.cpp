@@ -1,13 +1,18 @@
 #include "deaf.hpp"
 #include "raymath.h"
+#include "rlgl.h"
 
 bool colDetPlayerEdge(Vector2 vs, Vector2 ve);
 bool colDetPlayer(Mesh &cc);
 Vector2 player = {0,0};
-float playerR = 1.1;
+float playerR = 1.0;
 
 int ss = 6;
 int dd = 0;
+
+Vector2 normalLine(Vector2 v1, Vector2 v2){
+	return {-(v2.y-v1.y),(v2.x-v1.x)};
+};
 
 Vector2 conditionPoint(Vector2 v){
 	v.y *= -1;
@@ -28,8 +33,8 @@ int main(int argc, char* argv[])
 		#endif
 	);
 
-	Vector2 w1 = {1,2};
-	Vector2 w2 = {-0.5,1.9};
+	Vector2 w1 = {-0.9,2.1};
+	Vector2 w2 = {-0.5,0.2};
 	dd = std::min(S_WIDTH,S_HEIGHT)/ss;
 	
 	while(not WindowShouldClose()){
@@ -66,87 +71,64 @@ bool colDetPlayerEdge(Vector2 vs, Vector2 ve){
 	#define LOG(X) 
 
 	Vector2 ppos = player; //player pos
-	float prr = 0.5; //player radius
-	LOG("pos:");
-	LOG(ppos.x);
-	LOG(ppos.y);
+	float prr = playerR; //player radius
 
 	//find closest point to circle
 	float c1 = Vector2Distance(ppos,vs);
 	float c2 = Vector2Distance(ppos,ve);
-	LOG("dist");
-	LOG(c1);
-	LOG(c2);
-	Vector2 cp; //closest point
-	if(c1 < c2){
-		cp = vs;
-		LOG("vs");
-	}
-	else{
-		cp = ve;
-		LOG("ve");
-	}
-	
-	auto axis = Vector2Subtract(ppos,cp);
-	// axis.x *= -1;
-	LOG("axis");
-	LOG(axis.x);
-	LOG(axis.y);
-	DrawLineV(conditionPoint({0}),conditionPoint(axis),GREEN);
-	DrawLineV(conditionPoint({ppos}),conditionPoint(cp),LIME);
+	Vector2 cp = (c1 < c2) ? vs : ve; //closest point
 
-	// //axis parallel to closest point and circle center
-	// auto axis = Vector2Subtract(Vector2{ve.y,ve.x},Vector2{vs.y,vs.x});
-	// axis.x *= -1;
-	// LOG("axis");
-	// LOG(axis.x);
-	// LOG(axis.y);
-	
-	// //axis correct normal to edge
-	// auto axi2 = Vector2{-(ve.y-vs.y),(ve.x-vs.x)};
-	// LOG("axi2");
-	// LOG(axi2.x);
-	// LOG(axi2.y);
+	auto ax_close = Vector2Subtract(ppos,cp);
 
-	// projected circle points on axis of test
+	//normal to line calculation
+	auto ax_norm = Vector2Subtract({ve.y,ve.x},{vs.y,vs.x});
+	ax_norm.x *= -1;
+	ax_norm = Vector2Normalize(ax_norm);
 	
-	auto p1 = Vector2DotProduct( ppos, axis )+prr;
-	auto p2 = Vector2DotProduct( ppos, axis )-prr;
+	DrawLineV(conditionPoint({ppos}),conditionPoint(cp),LIME); // close line point
+	DrawLineV(conditionPoint(ax_norm),conditionPoint({0}),PURPLE); // line normal
+
+	// projected circle points on axis of test	
+	auto close_p1 = Vector2DotProduct( ppos, ax_close )+prr;
+	auto close_p2 = Vector2DotProduct( ppos, ax_close )-prr;
+	auto norm_p1 = Vector2DotProduct( ppos, ax_norm )+prr;
+	auto norm_p2 = Vector2DotProduct( ppos, ax_norm )-prr;
+	
 	// projected wall points on axis of test
-	auto w1 = Vector2DotProduct( vs, axis );
-	auto w2 = Vector2DotProduct( ve, axis );
-	LOG("dots");
-	LOG(p1);
-	LOG(p2);
-	LOG(w1);
-	LOG(w2);
+	auto close_w1 = Vector2DotProduct( vs, ax_close );
+	auto close_w2 = Vector2DotProduct( ve, ax_close );
+	auto norm_w = Vector2DotProduct( vs, ax_norm );
 
-	auto pmin = std::min(p1,p2);
-	auto pmax = std::max(p1,p2);
-	auto wmin = std::min(w1,w2);
-	auto wmax = std::max(w1,w2);
-	LOG("limits");
-	LOG(pmin);
-	LOG(pmax);
-	LOG(wmin);
-	LOG(wmax);
-    
-	DrawText(STR(pmin).c_str(),0,0,16,WHITE);
-	DrawText(STR(pmax).c_str(),0,16,16,WHITE);
-	DrawText(STR(wmin).c_str(),0,16*2,16,WHITE);
-	DrawText(STR(wmax).c_str(),0,16*3,16,WHITE);
+	bool shadow_close = false;
+	if(std::max(close_w1,close_w2) >= std::min(close_p1,close_p2)) 
+		shadow_close = true;
+	
+	bool shadow_norm = false;
+	if(norm_w >= std::min(norm_p1,norm_p2) && norm_w < std::max(norm_p1,norm_p2)) 
+		shadow_norm = true;
 
-	auto ppmin = conditionPoint({pmin,-3});
-	auto ppmax = conditionPoint({pmax,-3});
-	auto pwmin = conditionPoint({wmin,-2.6});
-	auto pwmax = conditionPoint({wmax,-2.6});
-	DrawLineV(ppmin,ppmax,BLUE);
-	DrawLineV(pwmin,pwmax,YELLOW);
-	// if( pmax > w1 && pmin <= w) {
-	    // return true;
-	// }
+	const char* tt = (shadow_close ? "CLOSE" : (shadow_norm ? "NORM" : "--"));
+	DrawText(tt,0,0,16,WHITE);
+	const char* col = (shadow_close && shadow_norm ? "COL" : "--");
+	DrawText(col,0,16,16,WHITE);
+	// DrawText(STR(close_p1).c_str(),0,0,16,WHITE);
+	// DrawText(STR(close_p2).c_str(),0,16,16,WHITE);
+	// DrawText(STR(close_w1).c_str(),0,16*2,16,WHITE);
+	// DrawText(STR(close_w2).c_str(),0,16*3,16,WHITE);
+	// DrawText(STR(norm_p1).c_str(),0,16*4,16,WHITE);
+	// DrawText(STR(norm_p2).c_str(),0,16*5,16,WHITE);
+	// DrawText(STR(norm_w1).c_str(),0,16*6,16,WHITE);
+	// DrawText(STR(norm_w2).c_str(),0,16*7,16,WHITE);
+	DrawLineV(conditionPoint({close_p1,-1.1}),conditionPoint({close_p2,-1.12}),LIME);
+	DrawLineV(conditionPoint({close_w1,-1.2}),conditionPoint({close_w2,-1.22}),ORANGE);
+	DrawLineV(conditionPoint({norm_p1,-1.8}),conditionPoint({norm_p2,-1.82}),PURPLE);
+	DrawLineV(conditionPoint({norm_w,-1.91}),conditionPoint({norm_w,-1.92}),YELLOW);
+	// // if( pmax > w1 && pmin <= w) {
+	//     // return true;
+	// // }
+	// 
 
-	return false;
+	return shadow_close && shadow_norm;
 }
 
 
