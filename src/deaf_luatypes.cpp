@@ -374,19 +374,10 @@ void lua_init(){
 	};
 	
     lua_control["isPCollisionObj"] = [](VObject* oo){
-        // auto ppos = puppet.cam.position;
-        // BoundingBox pbox = {
-        //     {ppos.x-0.5,ppos.y,ppos.z-0.5},
-        //     {ppos.x+0.5,ppos.y+1.5,ppos.z+0.5}
-        // };
-        // auto col = GetModelBoundingBox(oo->model.mesh);
-        // col.min.x -= oo->x/2;
-        // col.min.z -= oo->z/2;
-        // col.min.y -= oo->y/2;
-        // col.max.x += oo->x/2;
-        // col.max.z += oo->z/2;
-        // col.max.y += oo->y/2;
-        // return CheckCollisionBoxes(pbox,col);
+        auto ppos = puppet.cam.position;
+        float prr = 0.5f;
+        // Mesh m = oo->model.mesh.meshes[0];
+        // m.triangleCount
     };
     lua_visuals["draw3Dbox"] = [](float x,float y,float z,float sx,float sy,float sz){
         DrawCubeWires({x,y,z},sx,sy,sz,{0,255,255,255});
