@@ -1,9 +1,21 @@
 #include "deaf.hpp"
 #include "raymath.h"
 
-Vector2 player = {0,0};
 bool colDetPlayerEdge(Vector2 vs, Vector2 ve);
 bool colDetPlayer(Mesh &cc);
+Vector2 player = {0,0};
+float playerR = 1.1;
+
+int ss = 6;
+int dd = 0;
+
+Vector2 conditionPoint(Vector2 v){
+	v.y *= -1;
+	auto mm = MatrixTranslate(ss/2,ss/2,0);
+	auto p1 = Vector2Transform(v,mm);
+	p1 = Vector2Scale(p1,dd);
+	return p1;
+}
 
 int main(int argc, char* argv[]) 
 {
@@ -15,11 +27,33 @@ int main(int argc, char* argv[])
 		60
 		#endif
 	);
+
+	Vector2 w1 = {1,2};
+	Vector2 w2 = {-0.5,1.9};
+	dd = std::min(S_WIDTH,S_HEIGHT)/ss;
 	
 	while(not WindowShouldClose()){
         
         BeginDrawing();
         ClearBackground(BLACK);
+			
+			for(int d=0; d<ss; d++){
+				DrawLine(d*dd,0,d*dd,S_HEIGHT,d != ss/2 ? GRAY : RED);
+				DrawLine(0,d*dd,S_WIDTH,d*dd,d != ss/2 ? GRAY : RED);
+			}
+
+			auto p1 = conditionPoint(w1);
+			auto p2 = conditionPoint(w2);
+			DrawLineV(p1,p2,colDetPlayerEdge(w1,w2) ? RED : YELLOW);
+
+			auto pp = conditionPoint(player);
+			DrawCircleLines(pp.x,pp.y,playerR*dd,BLUE);
+			DrawPixelV(pp,BLUE);
+
+			if(IsKeyDown(KEY_UP)) player.y += 0.01;
+			if(IsKeyDown(KEY_DOWN)) player.y -= 0.01;
+			if(IsKeyDown(KEY_LEFT)) player.x -= 0.01;
+			if(IsKeyDown(KEY_RIGHT)) player.x += 0.01;
 
 	 	EndDrawing();   
 	}
@@ -29,6 +63,7 @@ int main(int argc, char* argv[])
 
 
 bool colDetPlayerEdge(Vector2 vs, Vector2 ve){
+	#define LOG(X) 
 
 	Vector2 ppos = player; //player pos
 	float prr = 0.5; //player radius
@@ -52,12 +87,14 @@ bool colDetPlayerEdge(Vector2 vs, Vector2 ve){
 		LOG("ve");
 	}
 	
-	auto axis = Vector2Subtract(cp,ppos);
+	auto axis = Vector2Subtract(ppos,cp);
 	// axis.x *= -1;
 	LOG("axis");
 	LOG(axis.x);
 	LOG(axis.y);
-	
+	DrawLineV(conditionPoint({0}),conditionPoint(axis),GREEN);
+	DrawLineV(conditionPoint({ppos}),conditionPoint(cp),LIME);
+
 	// //axis parallel to closest point and circle center
 	// auto axis = Vector2Subtract(Vector2{ve.y,ve.x},Vector2{vs.y,vs.x});
 	// axis.x *= -1;
@@ -94,6 +131,17 @@ bool colDetPlayerEdge(Vector2 vs, Vector2 ve){
 	LOG(wmin);
 	LOG(wmax);
     
+	DrawText(STR(pmin).c_str(),0,0,16,WHITE);
+	DrawText(STR(pmax).c_str(),0,16,16,WHITE);
+	DrawText(STR(wmin).c_str(),0,16*2,16,WHITE);
+	DrawText(STR(wmax).c_str(),0,16*3,16,WHITE);
+
+	auto ppmin = conditionPoint({pmin,-3});
+	auto ppmax = conditionPoint({pmax,-3});
+	auto pwmin = conditionPoint({wmin,-2.6});
+	auto pwmax = conditionPoint({wmax,-2.6});
+	DrawLineV(ppmin,ppmax,BLUE);
+	DrawLineV(pwmin,pwmax,YELLOW);
 	// if( pmax > w1 && pmin <= w) {
 	    // return true;
 	// }
