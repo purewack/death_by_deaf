@@ -3,6 +3,7 @@
 #include "rlgl.h"
 
 bool colDetPlayerEdge(Vector2 vs, Vector2 ve);
+bool colDetPlayerTri(Vector2 v1,Vector2 v2,Vector2 v3);
 bool colDetPlayer(Mesh &cc);
 Vector2 player = {0,0};
 float playerR = 1.0;
@@ -35,6 +36,7 @@ int main(int argc, char* argv[])
 
 	Vector2 w1 = {-0.9,2.1};
 	Vector2 w2 = {-0.5,0.2};
+	Vector2 w3 = {1,0.5};
 	dd = std::min(S_WIDTH,S_HEIGHT)/ss;
 	
 	while(not WindowShouldClose()){
@@ -47,9 +49,11 @@ int main(int argc, char* argv[])
 				DrawLine(0,d*dd,S_WIDTH,d*dd,d != ss/2 ? GRAY : RED);
 			}
 
+			auto col = colDetPlayerTri(w1,w2,w3);
 			auto p1 = conditionPoint(w1);
 			auto p2 = conditionPoint(w2);
-			DrawLineV(p1,p2,colDetPlayerEdge(w1,w2) ? RED : YELLOW);
+			auto p3 = conditionPoint(w3);
+			DrawTriangleLines(p1,p2,p3,col ? RED : YELLOW);
 
 			auto pp = conditionPoint(player);
 			DrawCircleLines(pp.x,pp.y,playerR*dd,BLUE);
@@ -85,8 +89,8 @@ bool colDetPlayerEdge(Vector2 vs, Vector2 ve){
 	ax_norm.x *= -1;
 	ax_norm = Vector2Normalize(ax_norm);
 	
-	DrawLineV(conditionPoint({ppos}),conditionPoint(cp),LIME); // close line point
-	DrawLineV(conditionPoint(ax_norm),conditionPoint({0}),PURPLE); // line normal
+	// DrawLineV(conditionPoint({ppos}),conditionPoint(cp),LIME); // close line point
+	// DrawLineV(conditionPoint(ax_norm),conditionPoint({0}),PURPLE); // line normal
 
 	// projected circle points on axis of test	
 	auto close_p1 = Vector2DotProduct( ppos, ax_close )+prr;
@@ -107,30 +111,33 @@ bool colDetPlayerEdge(Vector2 vs, Vector2 ve){
 	if(norm_w >= std::min(norm_p1,norm_p2) && norm_w < std::max(norm_p1,norm_p2)) 
 		shadow_norm = true;
 
-	const char* tt = (shadow_close ? "CLOSE" : (shadow_norm ? "NORM" : "--"));
-	DrawText(tt,0,0,16,WHITE);
-	const char* col = (shadow_close && shadow_norm ? "COL" : "--");
-	DrawText(col,0,16,16,WHITE);
-	// DrawText(STR(close_p1).c_str(),0,0,16,WHITE);
-	// DrawText(STR(close_p2).c_str(),0,16,16,WHITE);
-	// DrawText(STR(close_w1).c_str(),0,16*2,16,WHITE);
-	// DrawText(STR(close_w2).c_str(),0,16*3,16,WHITE);
-	// DrawText(STR(norm_p1).c_str(),0,16*4,16,WHITE);
-	// DrawText(STR(norm_p2).c_str(),0,16*5,16,WHITE);
-	// DrawText(STR(norm_w1).c_str(),0,16*6,16,WHITE);
-	// DrawText(STR(norm_w2).c_str(),0,16*7,16,WHITE);
-	DrawLineV(conditionPoint({close_p1,-1.1}),conditionPoint({close_p2,-1.12}),LIME);
-	DrawLineV(conditionPoint({close_w1,-1.2}),conditionPoint({close_w2,-1.22}),ORANGE);
-	DrawLineV(conditionPoint({norm_p1,-1.8}),conditionPoint({norm_p2,-1.82}),PURPLE);
-	DrawLineV(conditionPoint({norm_w,-1.91}),conditionPoint({norm_w,-1.92}),YELLOW);
-	// // if( pmax > w1 && pmin <= w) {
-	//     // return true;
-	// // }
-	// 
+	// const char* tt = (shadow_close ? "CLOSE" : (shadow_norm ? "NORM" : "--"));
+	// DrawText(tt,0,0,16,WHITE);
+	// const char* col = (shadow_close && shadow_norm ? "COL" : "--");
+	// DrawText(col,0,16,16,WHITE);
+	// // DrawText(STR(close_p1).c_str(),0,0,16,WHITE);
+	// // DrawText(STR(close_p2).c_str(),0,16,16,WHITE);
+	// // DrawText(STR(close_w1).c_str(),0,16*2,16,WHITE);
+	// // DrawText(STR(close_w2).c_str(),0,16*3,16,WHITE);
+	// // DrawText(STR(norm_p1).c_str(),0,16*4,16,WHITE);
+	// // DrawText(STR(norm_p2).c_str(),0,16*5,16,WHITE);
+	// // DrawText(STR(norm_w1).c_str(),0,16*6,16,WHITE);
+	// // DrawText(STR(norm_w2).c_str(),0,16*7,16,WHITE);
+	// DrawLineV(conditionPoint({close_p1,-1.1}),conditionPoint({close_p2,-1.12}),LIME);
+	// DrawLineV(conditionPoint({close_w1,-1.2}),conditionPoint({close_w2,-1.22}),ORANGE);
+	// DrawLineV(conditionPoint({norm_p1,-1.8}),conditionPoint({norm_p2,-1.82}),PURPLE);
+	// DrawLineV(conditionPoint({norm_w,-1.91}),conditionPoint({norm_w,-1.92}),YELLOW);
+	// // // if( pmax > w1 && pmin <= w) {
+	// //     // return true;
+	// // // }
+	// // 
 
 	return shadow_close && shadow_norm;
 }
 
+bool colDetPlayerTri(Vector2 v1,Vector2 v2,Vector2 v3){
+	return colDetPlayerEdge(v1,v2) || colDetPlayerEdge(v2,v3) || colDetPlayerEdge(v3,v1);
+}
 
 bool colDetPlayer(Mesh &cc){
 	// auto r = MatrixRotate({0,1.f,0},30.f);
