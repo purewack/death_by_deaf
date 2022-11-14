@@ -49,11 +49,13 @@ int main(int argc, char* argv[])
 				DrawLine(0,d*dd,S_WIDTH,d*dd,d != ss/2 ? GRAY : RED);
 			}
 
-			auto col = colDetPlayerTri(w1,w2,w3);
+			auto col = colDetPlayerEdge(w1,w2);
+			//auto col = colDetPlayerTri(w1,w2,w3);
 			auto p1 = conditionPoint(w1);
 			auto p2 = conditionPoint(w2);
 			auto p3 = conditionPoint(w3);
-			DrawTriangleLines(p1,p2,p3,col ? RED : YELLOW);
+			//DrawTriangleLines(p1,p2,p3,col ? RED : YELLOW);
+			DrawLineV(p1,p2,col ? RED : YELLOW);
 
 			auto pp = conditionPoint(player);
 			DrawCircleLines(pp.x,pp.y,playerR*dd,BLUE);
@@ -70,7 +72,7 @@ int main(int argc, char* argv[])
 	return 0;
 }
 
-
+//std::pair<Vector2,float> 
 bool colDetPlayerEdge(Vector2 vs, Vector2 ve){
 	#define LOG(X) 
 
@@ -104,12 +106,36 @@ bool colDetPlayerEdge(Vector2 vs, Vector2 ve){
 	auto norm_w = Vector2DotProduct( vs, ax_norm );
 
 	bool shadow_close = false;
-	if(std::max(close_w1,close_w2) >= std::min(close_p1,close_p2)) 
+	if(std::max(close_w1,close_w2) >= std::min(close_p1,close_p2))
 		shadow_close = true;
 	
 	bool shadow_norm = false;
 	if(norm_w >= std::min(norm_p1,norm_p2) && norm_w < std::max(norm_p1,norm_p2)) 
 		shadow_norm = true;
+
+	if(shadow_norm && shadow_close){
+		//displacement distance
+		auto d_close = (std::max(close_w1,close_w2) - std::min(close_p1,close_p2));
+		auto d_norm = (norm_w - std::min(norm_p1,norm_p2));
+		d_close = d_close < 0 ? 0 : d_close;
+		d_norm = d_norm < 0 ? 0 : d_norm;
+		auto dd = std::min(d_close,d_norm);
+
+		DrawText(std::string("Close: " + STR(d_close)).c_str(),0,0,16,WHITE);
+		DrawText(std::string("Norm: " + STR(d_norm)).c_str(),0,16,16,WHITE);
+		DrawText(STR(dd).c_str(),0,48,16,WHITE);
+
+		DrawLineV(conditionPoint({0}), conditionPoint((d_close < d_norm) ? ax_close : ax_norm), PURPLE);
+
+
+
+		// if(d_close < d_norm)
+		//  	return std::make_pair(ax_close,d_close);
+		// else
+		//  	return std::make_pair(ax_norm,d_norm);
+	}
+	//return std::make_pair(Vector2{0},0.f);
+	return (shadow_norm && shadow_close);
 
 	// const char* tt = (shadow_close ? "CLOSE" : (shadow_norm ? "NORM" : "--"));
 	// DrawText(tt,0,0,16,WHITE);
@@ -131,8 +157,6 @@ bool colDetPlayerEdge(Vector2 vs, Vector2 ve){
 	// //     // return true;
 	// // // }
 	// // 
-
-	return shadow_close && shadow_norm;
 }
 
 bool colDetPlayerTri(Vector2 v1,Vector2 v2,Vector2 v3){
