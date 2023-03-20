@@ -4,7 +4,7 @@ void VElement::drawBoundBox(){
     float xx = x - w*a_x;
     float yy = y - h*a_y;
     bool hover = (CheckCollisionPointRec(GetMousePosition(),{xx,yy,w,h}));
-    if(hover and IsMouseButtonPressed(0) and IS_SHIFT_DOWN and not in_console) bound_box = not bound_box;
+    if(hover and IsMouseButtonPressed(0) and IS_SHIFT_DOWN) bound_box = not bound_box;
     hover |= focus;
     
     if(hover and IS_SHIFT_DOWN) 
@@ -130,10 +130,32 @@ void VButton_bind(){
 }	
 
 
-void VImage::SetTexture(Texture2D t){
-    tex = t;
-    w = tex.width;
-    h = tex.height;
+void VImage::SetTexture(std::string filename){
+    VTexture found_tex = {0};
+    bool found = false;
+
+    for(auto t : textures_in_script){
+        if(t.filename == filename){
+            found_tex = t;
+            found = true;
+            break;
+        }
+    }
+
+    if(found)
+        tex = found_tex;
+    else{
+        tex.texture = LoadTexture(filename.c_str());
+        tex.filename = filename;
+        textures_in_script.push_back(tex);
+    }
+}
+
+
+VImage::VImage(std::string s){
+    VImage::SetTexture(s);
+    w = tex.texture.width;
+    h = tex.texture.height;
     tmx = 1;
     tmy = 1;
     tx = 0;
@@ -142,43 +164,59 @@ void VImage::SetTexture(Texture2D t){
 
 void VImage::draw() {
     //VElement::draw();
-    if(tex.id){
-        float sw = tex.width/tmx;
-        float sh = tex.height/tmy;
+    if(tex.texture.id){
+        float sw = tex.texture.width/tmx;
+        float sh = tex.texture.height/tmy;
         float sx = sw*tx;
         float sy = sw*ty;
     
-        DrawTexturePro(tex,
+        DrawTexturePro(tex.texture,
             Rectangle{sx,sy,sw,sh},
             Rectangle{x - w*a_x, y - h*a_y, w, h},
             Vector2{0,0},0,WHITE);
     }
 };
 void VImage_bind(){
-    lua.new_usertype<Texture2D>("VTexture");
-	auto image = lua.new_usertype<VImage>("VImage",sol::base_classes, sol::bases<VElement>());
-	image["tex"] = sol::property(&VImage::SetTexture);
+    auto image = lua.new_usertype<VImage>("VImage",sol::base_classes, sol::bases<VElement>());
+	image["texture"] = sol::property(&VImage::SetTexture);
 	image["tiles_count_x"] = &VImage::tmx;
 	image["tiles_count_y"] = &VImage::tmy;
 	image["tile_x"] = &VImage::tx;
 	image["tile_y"] = &VImage::ty;
-    lua_visuals["addVImage"] = []() -> VImage* { 
-		auto l = new VImage();
+    lua_visuals["addVImage"] = [](std::string tex) -> VImage* { 
+		auto l = new VImage(tex);
 		elements.push_back(l);
 		return l;
 	};
 }
 
 
+void VObject::SetModel(std::string filename){
+    VModel found_m = {0};
+    bool found = false;
 
-VObject::VObject(std::string path){
-    model = LoadModel(path.c_str());
+    for(auto m : models_in_script){
+        if(m.filename == filename){
+            found_m = m;
+            found = true;
+            break;
+        }
+    }
+
+    if(found)
+        model = found_m;
+    else{
+        model.mesh = LoadModel(filename.c_str());
+        model.filename = filename;
+        models_in_script.push_back(model);
+    }
 }
-VObject::~VObject(){
-    UnloadModel(model);
+VObject::VObject(std::string path){
+    if(path == "") return;
+    VObject::SetModel(path);
 }
 void VObject::draw(){
-    DrawModelEx(model,{x,y,z},{ax_x,ax_y,ax_z},ax_angle,{scale,scale,scale},col);
+    DrawModelEx(model.mesh,{x,y,z},{ax_x,ax_y,ax_z},ax_angle,{scale,scale,scale},col);
 }
 void VObject_bind(){
 	auto obj = lua.new_usertype<VObject>("VObject",sol::base_classes, sol::bases<VElement>());
@@ -197,8 +235,90 @@ void VObject_bind(){
 	
 }
 
+void VPlayer_bind(){
+    auto lua_player = lua["player"].get_or_create<sol::table>();
+    lua_player["setActive"] = [=](bool state){
+        puppet.active = state;
+    };
+    lua_player["getPos"] = [=](){
+        return std::make_tuple(
+            puppet.cam.position.x,
+            puppet.cam.position.y,
+            puppet.cam.position.z
+        );
+    };
+    lua_player["setPos"] = [=](float x, float y, float z){
+        puppet.cam.position.x = x;
+        puppet.cam.position.y = y;
+        puppet.cam.position.z = z;
+    };
+    lua_player["getLook"] = [=](){
+        return std::make_tuple(
+            puppet.cam.target.x,
+            puppet.cam.target.y,
+            puppet.cam.target.z
+        );
+    };
+    lua_player["setLook"] = [=](float x, float y, float z){
+        puppet.cam.target.x = x;
+        puppet.cam.target.y = y;
+        puppet.cam.target.z = z;
+    };
+    lua_player["getMouse"] = [=](){
+        return std::make_tuple(
+            puppet.mpos.x,
+            puppet.mpos.y,
+            puppet.mpos_new.x,
+            puppet.mpos_new.y
+        );
+    };
+    lua_player["setMouse"] = [=](float x, float y){
+        puppet.mpos.x = x;
+        puppet.mpos.y = y;
+    };
+    lua_player["getRotation"] = [=](){
+        return std::make_tuple(
+            puppet.rot.x,
+            puppet.rot.y
+        );
+    };
+    lua_player["setRotation"] = [=](float x, float y){
+        puppet.rot.x = x;
+        puppet.rot.y = y;
+    };
+    
+    lua_player["setFov"] = [=](float v){
+        puppet.cam.fovy = v;
+    };
+}
 
-
+VTrigger::VTrigger() : VObject(""){
+}
+VTrigger::~VTrigger(){
+}
+void VTrigger::draw(){
+    rlPushMatrix();
+        rlTranslatef(x,y,z);
+        rlRotatef(ax_angle,ax_x,ax_y,ax_z);
+        DrawCubeWiresV({0,0,0},{1,1,1},PURPLE);
+    rlPopMatrix();
+}
+void VTrigger_bind(){
+    auto trig = lua.new_usertype<VTrigger>("VTrigger",sol::base_classes, sol::bases<VObject,VElement>());
+    trig["sx"] = &VTrigger::sx;  
+    trig["sy"] = &VTrigger::sy;  
+    trig["sz"] = &VTrigger::sz;
+    trig["onContactBegin"] = &VTrigger::onContactBegin;
+    trig["onContactEnd"] = &VTrigger::onContactEnd;
+    lua_visuals["addVTrigger"] = []() -> VTrigger* {
+        auto t = new VTrigger();
+        objects.push_back(t);
+        return t;
+    };
+    trig["checkCollision"] = [](){
+        
+    };
+}
 
 void lua_Vbind(){
     VElement_bind();
@@ -206,5 +326,8 @@ void lua_Vbind(){
     VLabel_bind();
     VImage_bind();
     VObject_bind();
+    VPlayer_bind();
+    VTrigger_bind();
+    VAudio_bind();
 }
 

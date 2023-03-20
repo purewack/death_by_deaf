@@ -1,30 +1,28 @@
 #include "deaf.hpp"
 
 void init();
-void pollCtrl();
+void tickThread();
 void screen();
 void script();
-Camera3D player_cam;
-float player_rotation = 0.0f;
 
 int main(int argc, char* argv[]) 
 {
-	
+	LOG(VER);
     init();
     audio_init();
 
     static std::atomic_bool running = true;
-    std::thread thread_input([=](){
+    std::thread thread_tick([=](){
         while(running){
-            pollCtrl();
-            usleep(16666);
+            tickThread();
+            usleep(TICK_TIME);
         }
     });
 
     screen();
     
     running = false;
-    thread_input.join();
+    thread_tick.join();
     audio_end();
 
 	return 0;
@@ -38,21 +36,34 @@ void init()
 	commands.push_back("");
 	command = "";
 	
-	InitWindow(S_WIDTH,S_HEIGHT_T,"DEAF Engine");
-	SetTargetFPS(120);
+	InitWindow(S_WIDTH,S_HEIGHT,"DEAF Engine");
+	SetTargetFPS(
+		#ifdef WIN32
+		120
+		#else
+		60
+		#endif
+	);
 
 	lua_init();
 	script();
+	
+	puppet.cam = { { 0.0f, 1.5f, 0.0f }, { 0.0f, 1.5f, 1.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
+}
+
+void printLog(std::string s){
+	loglines.push_back(s);
+	loglines_cursor = loglines.size();
 }
 
 void execCommand(){
-	try{
-		lua.script(command);
-		//LOG("{"+command+"}");
+	
+	auto cmdres = lua.script(command, [](lua_State*, sol::protected_function_result pfr) {return pfr;});
+	if(!cmdres.valid()){
+		printLog("Invalid command [" + command + "]");
 	}
-	catch(std::exception ex){
-		ERROR("Invalid command : " + command);
-	}	
+	else
+		printLog(command);
 	commands.push_back(command);
 	command = "";
 	cmd_index = commands.size();
@@ -61,40 +72,55 @@ void execCommand(){
 
 void script(){
 	onFrame = nullptr;
-	onUIFrame = nullptr;
+    onFrame3D = nullptr;
 	for(auto e : elements) delete e;
 	for(auto a : actions) delete a;
 	elements.clear();
 	actions.clear();
 	for(auto t: textures_in_script){
-		UnloadTexture(t);
+		UnloadTexture(t.texture);
+	}
+	for(auto m: models_in_script){
+		UnloadModel(m.mesh);
 	}
 	textures_in_script.clear();
+	models_in_script.clear();
     lua["control"]["navigables"] = nullptr;
-	lua["visuals"]["onUIReload"]();	
+	// if(lua_visuals["onUIReload"])
+		lua_visuals["onUIReload"]();	
     
 	//load screen script
 	try{		
 		auto sc = lua.load_file(chain.back());
-		auto result = sc();
-		script_error = not result.valid();
-		if (result.valid()) {
-            onUIFrame = lua["visuals"]["onUIFrame"];
-			onFrame = lua["visuals"]["onFrame"];
-			LOG("script success");
+		
+		if (sc.valid()) {
+			auto result = sc();
+			if(result.valid()){
+                onFrame = lua_visuals["onVideoFrame"];
+                onFrame3D = lua_visuals["onVideoFrame3D"];
+				printLog(">>Load script success");
+				in_console = false;
+			}
+			else{
+				in_console = true;
+				printLog("--Script execute error--");
+				sol::error err = result;
+				std::string what = err.what();
+				printLog(what);
+			}
 		}
-		else {
-			// Call failed
-			sol::error err = result;
+		else{
+			in_console = true;
+			printLog("Invalid script");
+			sol::error err = sc;
 			std::string what = err.what();
-			std::cout << "call failed, sol::error::what() is " << what << std::endl;
-			// 'what' Should read 
-			// "Handled this message: negative number detected"
+			printLog(what);
 		}
 	}
 	catch(std::exception ex){
-		script_error = true;
-		LOG("script error");
+		in_console = true;
+		printLog("--Script load exception--");
+		printLog(std::string(ex.what()));
 	}
 	
 	
@@ -168,15 +194,9 @@ void do_elements()
 	delete timer_elem;
 }
 
-bool init3d = false;
 void do_objects()
 {
-    if(!init3d){
-        init3d = true;
-        player_cam = { { 0.0f, 1.5f, 0.0f }, { 0.0f, 1.5f, 1.0f }, { 0.0f, 1.0f, 0.0f }, 45.0f, 0 };
-    }
-
-    BeginMode3D(player_cam);
+    BeginMode3D(puppet.cam);
         if(floor_view){
             DrawCube({0.5f,0.f,0.f}, 1.0f,0.1f,0.1f,RED);
             DrawCube({0.f,0.5f,0.f}, 0.1f,1.0f,0.1f,GREEN);
@@ -186,10 +206,9 @@ void do_objects()
         for(auto o : objects){
             o->draw();
         }
+        if(onFrame3D)
+            onFrame3D();
     EndMode3D();
-
-  	player_cam.target.x = player_cam.position.x + std::sin(player_rotation);
-  	player_cam.target.z = player_cam.position.z + std::cos(player_rotation);
 }
 
 void do_grid()
@@ -226,19 +245,22 @@ void do_grid()
 
 void do_console()
 {
-	
+	static int cursor = 0;
 	if(in_console){
 		int c = GetCharPressed();
 
 		if(IsKeyPressed(KEY_BACKSPACE) and command.size()){
-			command.pop_back();
+			command.erase(cursor-1,1);
+			cursor--;
 		}
 		else if(IsKeyPressed(KEY_ENTER)){
 			execCommand();
+			cursor = 0;
 		}
 		else if(IsKeyPressed(KEY_UP)){
 			if(cmd_index > 0) cmd_index--;
 			command = commands[cmd_index];
+			cursor = command.size();
 		}
 		else if(IsKeyPressed(KEY_DOWN)){
 			cmd_index++;
@@ -248,23 +270,42 @@ void do_console()
 			}
 			else
 			command = commands[cmd_index];
+			cursor = command.size();
+		}
+		else if(IsKeyPressed(KEY_LEFT)){
+			if(cursor)
+			cursor--;
+		}
+		else if(IsKeyPressed(KEY_RIGHT)){
+			if(cursor < command.size())
+			cursor++;
 		}
 		else if(c){
-			if(c != '`')
-			command += c;
+			if(c != '`'){			
+				std::string ss = "";
+				ss += c;
+				command.insert(cursor,ss);
+				cursor++;
+			}
+		}
+		
+		DrawRectangle(16,0,S_WIDTH-32,16,(in_console ? DARKGRAY : (IS_SHIFT_DOWN ? RED : BLACK)));
+		DrawString("-:" + command,16,0);
+		DrawRectangle(16+(cursor+2)*8,0,8,16,{0,255,255,64});
+		DrawRectangle(16,16,S_WIDTH-32,S_HEIGHT-32,{0,255,255,32});
+		int yy = 16;
+		for(auto s : loglines){
+			DrawString("> " + s,32,yy);
+			yy+=16;	
 		}
 	}
 
-	DrawRectangle(16,S_HEIGHT,S_WIDTH-32,16,(in_console ? DARKGRAY : (IS_SHIFT_DOWN ? RED : BLACK)));
-	DrawString("->" + command,16,S_HEIGHT);
-	if(not in_console)DrawRectangleLines(16,S_HEIGHT,S_WIDTH-32,16,DARKGRAY);	
-	
 	if(IsKeyPressed(KEY_GRAVE)) in_console = not in_console;
-
 }
 
 void screen()
 {
+	static long dt = 0;
 	//SetTraceLogLevel(LOG_ERROR);
     std::cout << "[gfx]" << std::endl;
     time_ac_old = time_ac_now = std::chrono::high_resolution_clock::now();
@@ -283,8 +324,11 @@ void screen()
         {
             std::lock_guard<std::mutex> lg(mtx_fps);
             auto timer_frame = new ScopedTimer(&bench_frame);
-            if(onFrame) onFrame();
-            if(onUIFrame) onUIFrame();
+            if(not in_console){
+			    puppet.mpos_new = GetMousePosition();
+			    if(onFrame)
+			    onFrame(GetFrameTime()*1000.f);
+		    }
         }
 
         {
@@ -295,8 +339,8 @@ void screen()
         }
 
         if(not message_text.empty() and message_timer.count() > 0){
-            DrawRectangle(0,0,640,64,{255,255,255,64});
-            DrawString(message_text,320,32,32,WHITE,0.5,0.5);
+            DrawRectangle(0,S_HEIGHT-64,S_WIDTH,64,{255,255,255,64});
+            DrawString(message_text,S_WIDTH>>1,S_HEIGHT-32,1.f,WHITE,0.5f,0.5f);
             message_timer -= fpstime{1};
         }
 
@@ -304,10 +348,6 @@ void screen()
 
         do_grid();
 
-        if(script_error){
-            DrawRectangle(0,0,640,32,GRAY);
-            DrawString("Error in script",0,0,32);
-        }
         if(bench_view){
             std::chrono::nanoseconds total = std::chrono::duration_cast<std::chrono::nanoseconds>(fpstime{1});
             float ratio_fps = float(bench_fps.count()) / float(total.count());
@@ -373,6 +413,7 @@ void screen()
 
         EndDrawing();
 
+
         {
         std::lock_guard<std::mutex> lg(mtx_fps);
         check_script();
@@ -381,60 +422,47 @@ void screen()
 	CloseWindow();
 }
 
-
-void pollCtrl()
+void tickThread()
 {
-    if(IsKeyPressed(KEY_W)){
-        libpd_bang("walk_start");
-    }
-    if(IsKeyReleased(KEY_W)){
-        libpd_bang("walk_stop");
-    }
-    if(IsKeyPressed(KEY_S)){
-        libpd_bang("walk_start");
-    }
-    if(IsKeyReleased(KEY_S)){
-        libpd_bang("walk_stop");
-    } 
-    if(IsKeyDown(KEY_W)) {
-        player_cam.position.z += 0.06f*std::cos(player_rotation);
-        player_cam.position.x += 0.06f*std::sin(player_rotation);
-    }
-    if(IsKeyDown(KEY_S)) {
-        player_cam.position.z -= 0.06f*std::cos(player_rotation);
-        player_cam.position.x -= 0.06f*std::sin(player_rotation);
-    }
-    if(IsKeyDown(KEY_A)) {
-        player_rotation += (2.0f/360.0f)*2.0f*3.1415f;
-    }
-    if(IsKeyDown(KEY_D)) {
-        player_rotation -= (2.0f/360.0f)*2.0f*3.1415f;
-    }
-
-
-    std::lock_guard<std::mutex> lg(mtx_fps);
-	Vector2 m = GetMousePosition();
-	bool bb = IsMouseButtonDown(0);
-	static bool bo;
-	for(auto e : elements)
+	static long t = 0;
 	{
-		if(VButton* b = dynamic_cast<VButton*>(e))
-		{	
-			float xx = b->x - b->w*b->a_x;
-			float yy = b->y - b->h*b->a_y;
-			auto r = Rectangle{xx,yy,b->w,b->h};
-			if(CheckCollisionPointRec(m,r)){				
-                if(not b->state and bb and not bo)
-                {
-				    b->state = bb;
-                    if(b->onPress) b->onPress();
-				}
-                else if(b->state and not bb and bo){
-				    b->state = bb;
-                    if(b->onRelease) b->onRelease();
-                }
-			}
+        std::lock_guard<std::mutex> lg(mtx_fps);
+		if(not in_console){
+			if(lua_system["onEngineTick"] != sol::lua_nil)
+			lua_system["onEngineTick"](t);
+			t++;
 		}
-	}
-	bo = bb;
+    }
+	
+	
+	// if(audio_editor)
+	// 	libpd_poll_gui();
+
+	// auto m = GetMousePosition();
+	// puppet.mpos_new = m;
+    // std::lock_guard<std::mutex> lg(mtx_fps);
+	// bool bb = IsMouseButtonDown(0);
+	// static bool bo;
+	// for(auto e : elements)
+	// {
+	// 	if(VButton* b = dynamic_cast<VButton*>(e))
+	// 	{	
+	// 		float xx = b->x - b->w*b->a_x;
+	// 		float yy = b->y - b->h*b->a_y;
+	// 		auto r = Rectangle{xx,yy,b->w,b->h};
+	// 		if(CheckCollisionPointRec(m,r)){				
+    //             if(not b->state and bb and not bo)
+    //             {
+	// 			    b->state = bb;
+    //                 if(b->onPress) b->onPress();
+	// 			}
+    //             else if(b->state and not bb and bo){
+	// 			    b->state = bb;
+    //                 if(b->onRelease) b->onRelease();
+    //             }
+	// 		}
+	// 	}
+	// }
+	// bo = bb;
+
 }

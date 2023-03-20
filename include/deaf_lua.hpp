@@ -1,5 +1,7 @@
 #pragma once
+#include <string>
 #include "raylib.h"
+#include "rlgl.h"
 inline sol::state lua;
 inline sol::table lua_system;
 inline sol::table lua_visuals;
@@ -49,35 +51,6 @@ struct VElement{
 	virtual void draw();
 };
 
-
-struct VImage : public VElement {
-	Texture2D tex;
-	int tmx, tmy = 1;
-	int tx, ty = 0;
-	
-	virtual ~VImage(){};
-
-	void SetTexture(Texture2D t);
-
-	void draw() override;
-};
-
-struct VObject : public VElement {
-	float z = 0.f;
-	float a_z = 0.f;
-	float ax_x = 0.f;
-	float ax_z = 0.f;
-	float ax_y = 0.f;
-	float ax_angle = 0.f;
-	float scale = 1.f;
-	Model model;
-	void draw() override;
-
-	VObject(std::string path);
-	virtual ~VObject();
-};
-
-
 struct VLabel : public VElement{
 
 	virtual ~VLabel(){};
@@ -102,6 +75,79 @@ struct VButton : public VElement {
 	//void onPress();
 };
 
+struct VTexture {
+	Texture2D texture;
+	std::string filename;
+};
+
+struct VModel {
+	Model mesh;
+	std::string filename;
+};
+
+struct VImage : public VElement {
+	VTexture tex;
+	int tmx, tmy = 1;
+	int tx, ty = 0;
+	
+	VImage(std::string tex);
+	virtual ~VImage(){};
+
+	void SetTexture(std::string t);
+
+	void draw() override;
+};
+
+struct VObject : public VElement {
+	float z = 0.f;
+	//anchor z
+	float a_z = 0.f;
+
+	//axis of rotation
+	float ax_x = 0.f;
+	float ax_z = 0.f;
+	float ax_y = 0.f;
+	
+	//axis angle
+	float ax_angle = 0.f;
+
+	float scale = 1.f;
+	VModel model;
+	void draw() override;
+
+	VObject(std::string path);
+	virtual ~VObject(){};
+	void SetModel(std::string filename);
+};
+
+struct VPlayer
+{
+	Camera3D cam;
+	Vector2 rot;
+	Vector2 mpos;
+	Vector2 mpos_new;
+	bool active = true;
+};
+
+
+struct VTrigger : public VObject {
+
+	float sx = 1.f;
+	float sy = 1.f;
+	float sz = 1.f;
+
+	VTrigger();
+	virtual ~VTrigger();
+
+	bool contact_old;
+	bool contact_now;
+	std::function<void(void)> onContactBegin;
+	std::function<void(void)> onContactEnd;
+
+	void draw() override;
+};
+
+inline VPlayer puppet = {0};
 inline std::vector<Font> fonts;
 inline Font ui_font;
 Vector2 DrawString(std::string str ,float x, float y, float s = 16, Color c = WHITE, float anchorX = 0.0f, float anchorY = 0.0f, Font f = ui_font);

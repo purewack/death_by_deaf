@@ -22,15 +22,7 @@
 #include <limits>
 #endif
 
-#define AUDIO_CLIP_SIZE 8388608 //8MB 8*1024*1024*4bytes ~ 43s @ 48kHz
-
 using frametime = std::chrono::duration<int64_t, std::ratio<64,48000>>;
-
-enum MidiBytes: int{
-	on = 144, //x90
-	off = 128, //x80
-	cc = 176, //xb0
-};
 
 inline RtAudio adac;
 
@@ -38,3 +30,5 @@ void audio_end();
 int audio_init();
 int audioProcess (void *out_b, void *in_b, unsigned int nBufferFrames,
            double streamTime, RtAudioStreamStatus status, void *data );
+void VAudio_bind();
+inline bool audio_editor = false;

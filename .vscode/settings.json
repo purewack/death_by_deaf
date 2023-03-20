@@ -105,6 +105,7 @@
         "xtr1common": "cpp",
         "xtree": "cpp",
         "xutility": "cpp",
-        "*.m": "cpp"
+        "*.m": "cpp",
+        "filesystem": "cpp"
     }
 }

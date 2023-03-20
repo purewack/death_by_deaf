@@ -13,8 +13,20 @@ VSequence::~VSequence(){
     actions.clear();
 }
 
+int lua_log_ex(lua_State* L, sol::optional<const std::exception&> maybe_exception, sol::string_view description) {
+	
+    std::cout << "Script: An exception occurred in a function ";
+	if (maybe_exception) {
+		const std::exception& ex = *maybe_exception;
+		printLog(ex.what());
+	}
+
+	return sol::stack::push(L, description);
+}
+
 void lua_init(){
-    
+    lua.set_exception_handler(lua_log_ex);
+
 	lua.open_libraries(sol::lib::base);
 	lua.open_libraries(sol::lib::table);
 	lua.open_libraries(sol::lib::string);
@@ -23,7 +35,6 @@ void lua_init(){
 	lua.open_libraries(sol::lib::os);
 	lua["S_W"] = S_WIDTH;
 	lua["S_H"] = S_HEIGHT;
-	lua["S_HT"] = S_HEIGHT_T;
 	lua.require_file("json","scripts/json.lua");
 	
     lua_system = lua["system"].get_or_create<sol::table>();
@@ -114,21 +125,21 @@ void lua_init(){
         lua.script("io.output():close()");
     };
 
-
-    lua_control["shift"] = (int)0;
-    lua_control["ev_vel"] = (int)0;
-    lua_control["ev_note_on"] = MidiBytes::on;
-    lua_control["ev_note_off"] = MidiBytes::off;
-    lua_control["ev_note_cc"] = MidiBytes::cc;
-    lua_control["map"].get_or_create<sol::table>();
-    lua_control["map"][0x90].get_or_create<sol::table>();
-    lua_control["map"][0x80].get_or_create<sol::table>();
-    lua_control["map"][0xA0].get_or_create<sol::table>();
-    lua_control["unitmap"].get_or_create<sol::table>();
-    lua_control["unitmap"][0x90].get_or_create<sol::table>();
-    lua_control["unitmap"][0x80].get_or_create<sol::table>();
-    lua_control["unitmap"][0xA0].get_or_create<sol::table>();
-    lua_control["units"].get_or_create<sol::table>();
+    lua_control["isKeyDown"] = [=](int key) -> bool {
+        return IsKeyDown(key);
+    };
+    lua_control["isKeyUp"] = [=](int key) -> bool {
+        return IsKeyUp(key);
+    };
+    lua_control["isKeyPressed"] = [=](int key) -> bool {
+        return IsKeyPressed(key);
+    }; 
+    lua_control["isKeyReleased"] = [=](int key) -> bool {
+        return IsKeyReleased(key);
+    };
+    lua_control["getKeyPressed"] = [=]() -> int {
+        return GetKeyPressed();
+    };
     lua_control["focus_idx"] = (int)0;
     lua_control["navigables"].get_or_create<sol::table>();
     lua_control["navigate"] = [=](){
@@ -166,12 +177,6 @@ void lua_init(){
 
     };
 
-
-	lua_visuals["createTexture"] = [](std::string t) -> Texture2D {
-		auto tex = LoadTexture((t).c_str());
-		textures_in_script.push_back(tex);
-		return tex;
-	};
 	
     lua_visuals["removeVObject"] = [](VObject* l){
         objects.erase(std::remove_if(
@@ -355,6 +360,28 @@ void lua_init(){
 		message_text = msg;
 		message_timer = std::chrono::duration_cast<fpstime>(std::chrono::seconds{2});
 	};
+
+    lua_visuals["mouse"] = [](bool state){
+        if(state)
+            EnableCursor();
+        else
+            DisableCursor();
+	};    
+    lua_visuals["fullscreen"] = [](bool state){
+        if(IsWindowFullscreen() && state) return;
+        if(!IsWindowFullscreen() && !state) return;
+        ToggleFullscreen();
+	};
+	
+    lua_control["isPCollisionObj"] = [](VObject* oo){
+        auto ppos = puppet.cam.position;
+        float prr = 0.5f;
+        // Mesh m = oo->model.mesh.meshes[0];
+        // m.triangleCount
+    };
+    lua_visuals["draw3Dbox"] = [](float x,float y,float z,float sx,float sy,float sz){
+        DrawCubeWires({x,y,z},sx,sy,sz,{0,255,255,255});
+    };
 
     lua_Vbind();
 
