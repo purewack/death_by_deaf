@@ -1,2 +1,5 @@
 .DS_Store
 build
+bin/deaf
+bin/deaf.exe
+bin/lib*
