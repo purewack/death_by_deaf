@@ -3,3 +3,7 @@ build
 bin/deaf
 bin/deaf.exe
 bin/lib*
+
+dist
+node_modules
+.parcel-cache
